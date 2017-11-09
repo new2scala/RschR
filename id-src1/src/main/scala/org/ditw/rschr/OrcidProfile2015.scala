@@ -26,7 +26,7 @@ object OrcidProfile_2015 extends Serializable {
 
   case class OrcidSource(
                             source_orcid:OrcidIdentifier,
-                            source_client_id:String,
+                            source_client_id:OrcidIdentifier,
                             source_name:StringInfo,
                             source_date:DateInfo
                           )
@@ -414,7 +414,7 @@ object OrcidProfile_2015 extends Serializable {
 
   case class WorkTitle(
                       title:StringInfo,
-                      subtitle:String,
+                      subtitle:StringInfo,
                       translated_title:TranslatedTitle
                       )
 
@@ -634,7 +634,27 @@ object OrcidProfile_2015 extends Serializable {
                          translated_title: TranslatedTitle
                          )
 
-  case class AmountCurrency(value:Double, currency:String)
+  object Renames_FundingTitle extends Serializable {
+    val translated_title = "translated_title"
+    val translated_title_orig = "translated-title"
+
+    val renames = FieldSerializer[FundingTitle](
+      renameTo(translated_title, translated_title_orig),
+      renameFrom(translated_title_orig, translated_title)
+    )
+  }
+
+  case class AmountCurrency(value:String, currency:String)
+
+  object Renames_AmountCurrency extends Serializable {
+    val currency = "currency"
+    val currency_orig = "currency-code"
+
+    val renames = FieldSerializer[AmountCurrency](
+      renameTo(currency, currency_orig),
+      renameFrom(currency_orig, currency)
+    )
+  }
 
   case class FundingContributorAttrs(role:String)
 
@@ -666,7 +686,7 @@ object OrcidProfile_2015 extends Serializable {
                     contributors:FundingContributors,
                     organization:Organization,
                     source:OrcidSource,
-                    create_date:DateInfo,
+                    created_date:DateInfo,
                     last_modified_date:DateInfo,
                     visibility:String
                     )
@@ -699,8 +719,8 @@ object OrcidProfile_2015 extends Serializable {
     val contributors = "contributors"
     val contributors_orig = "funding-contributors"
 
-    val create_date = "create_date"
-    val create_date_orig = "create-date"
+    val created_date = "created_date"
+    val created_date_orig = "created-date"
 
     val last_modified_date = "last_modified_date"
     val last_modified_date_orig = "last-modified-date"
@@ -712,8 +732,22 @@ object OrcidProfile_2015 extends Serializable {
         .orElse(renameTo(title, title_orig))
         .orElse(renameTo(short_desc, short_desc_orig))
         .orElse(renameTo(start_date, start_date_orig))
+        .orElse(renameTo(end_date, end_date_orig))
         .orElse(renameTo(eids, eids_orig))
-
+        .orElse(renameTo(contributors, contributors_orig))
+        .orElse(renameTo(created_date, created_date_orig))
+        .orElse(renameTo(last_modified_date, last_modified_date_orig)),
+      renameFrom(put_code_orig, put_code)
+        .orElse(renameFrom(_type_orig, _type))
+        .orElse(renameFrom(org_def_type_orig, org_def_type))
+        .orElse(renameFrom(title_orig, title))
+        .orElse(renameFrom(short_desc_orig, short_desc))
+        .orElse(renameFrom(start_date_orig, start_date))
+        .orElse(renameFrom(end_date_orig, end_date))
+        .orElse(renameFrom(eids_orig, eids))
+        .orElse(renameFrom(contributors_orig, contributors))
+        .orElse(renameFrom(created_date_orig, created_date))
+        .orElse(renameFrom(last_modified_date_orig, last_modified_date))
     )
   }
 
@@ -875,7 +909,10 @@ object OrcidProfile_2015 extends Serializable {
     Renames_ExternalIdentifiers.renames +
     Renames_ResearcherUrls.renames +
     Renames_ResearcherUrl.renames +
-    Renames_TranslatedTitle.renames
+    Renames_TranslatedTitle.renames +
+    Renames_Funding.renames +
+    Renames_FundingTitle.renames +
+    Renames_AmountCurrency.renames
 
   def readJson(j:String):OrcidProfile2015 = {
     import org.json4s.jackson.JsonMethods._
