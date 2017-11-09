@@ -14,21 +14,25 @@ object ReadJsonTests extends App {
 //    val j = IOUtils.toString(fin, StandardCharsets.UTF_8)
 //    fin.close()
     val p = readJson(json)
-    val act = p.profile.activities
-    val actCount =
-      if (act != null && act.works != null)
-        p.profile.activities.works.work.length
-      else 0
+    if (p.profile != null) {
+      val prf = p.profile
+      val act = prf.activities
+      val actCount =
+        if (act != null && act.works != null)
+          act.works.work.length
+        else 0
 
-    if (p.profile != null && p.profile.bio != null && p.profile.bio.person_details != null) {
-      val pd = p.profile.bio.person_details
-      val gn = pd.given_names
-      val fn = pd.family_name
-      s"$gn, $fn ($actCount)"
+      if (prf != null && prf.bio != null && prf.bio.person_details != null) {
+        val pd = prf.bio.person_details
+        val gn = pd.given_names
+        val fn = pd.family_name
+        s"$gn, $fn ($actCount)"
+      }
+      else {
+        s"[Unknown] ($actCount)"
+      }
     }
-    else {
-      s"[Unknown] ($actCount)"
-    }
+    else s"[EmptyProfile]: ${p.error_desc}"
   }
 
   private var _count = 0L
@@ -44,8 +48,19 @@ object ReadJsonTests extends App {
     }
     catch {
       case t:Throwable => {
-        println(s"failed to process [$fn]")
-        throw t
+        try {
+          val deprecated = readDepRecJson(s)
+          val tmp = s"deprecated profile: $fn"
+          println(tmp)
+          List(tmp)
+        }
+        catch {
+          case t1:Throwable => {
+            println(s"failed to process [$fn]")
+            throw t
+          }
+        }
+
       }
     }
   }
@@ -54,7 +69,7 @@ object ReadJsonTests extends App {
   //"/media/sf_vmshare/ORCID_public_data_file_2015.tar.gz"
   val allSummaries = TgzUtils.processTgz(
     p,
-    s => s.startsWith("./json/"),
+    s => s.endsWith(".json"),
     fileHandler
   )
 

@@ -272,7 +272,7 @@ object OrcidProfile_2015 extends Serializable {
     keywords:Keywords,
     external_identifiers:ExternalIdentifiers,
     delegation:String,
-    applications:String,
+    applications:Option[String],
     scope:String
     )
 
@@ -874,11 +874,53 @@ object OrcidProfile_2015 extends Serializable {
     message_version:String,
     profile:Profile2015,
     search_results:String,
-    error_desc:String
+    error_desc:StringInfo
   ) {
   }
 
+  case class OrcidRecord(
+                        orcid:StringInfo,
+                        orcid_id:String,
+                        orcid_identifier:String
+                        )
 
+  object Renames_OrcidRecord extends Serializable {
+    val orcid_id = "orcid_id"
+    val orcid_id_orig = "orcid-id"
+
+    val orcid_identifier = "orcid_identifier"
+    val orcid_identifier_orig = "orcid-identifier"
+
+    val renames = FieldSerializer[OrcidRecord](
+      renameTo(orcid_id, orcid_id_orig) orElse
+        renameTo(orcid_identifier, orcid_identifier_orig),
+      renameFrom(orcid_id_orig, orcid_id) orElse
+        renameFrom(orcid_identifier_orig, orcid_identifier)
+    )
+
+  }
+
+  case class DeprecatedProfile(
+    deprecated_date:DateInfo,
+    primary_record:OrcidRecord
+  )
+
+  object Renames_DeprecatedProfile extends Serializable {
+
+    val deprecated_date = "deprecated_date"
+    val deprecated_date_orig = "deprecated-date"
+
+    val primary_record = "primary_record"
+    val primary_record_orig = "primary-record"
+
+    val renames = FieldSerializer[DeprecatedProfile](
+      renameTo(deprecated_date, deprecated_date_orig) orElse
+        renameTo(primary_record, primary_record_orig),
+      renameFrom(deprecated_date_orig, deprecated_date) orElse
+        renameFrom(primary_record_orig, primary_record)
+    )
+
+  }
   object Renames_OrcidProfile2015 extends Serializable {
     val message_version = "message_version"
     val message_version_orig = "message-version"
@@ -891,6 +933,9 @@ object OrcidProfile_2015 extends Serializable {
 
     val error_desc = "error_desc"
     val error_desc_orig = "error-desc"
+
+    val deprecated_date = "deprecated_date"
+    val deprecated_date_orig = "deprecated-date"
 
     val renames = FieldSerializer[OrcidProfile2015](
       renameTo(message_version, message_version_orig) orElse
@@ -935,10 +980,19 @@ object OrcidProfile_2015 extends Serializable {
     Renames_AmountCurrency.renames +
     Renames_ContactEmail.renames
 
+  private val _fmt_dep = DefaultFormats +
+    Renames_DeprecatedProfile.renames +
+    Renames_OrcidRecord.renames
+
   def readJson(j:String):OrcidProfile2015 = {
     import org.json4s.jackson.JsonMethods._
     implicit val fmt = _fmt
     parse(j).extract[OrcidProfile2015]
   }
 
+  def readDepRecJson(j:String):DeprecatedProfile = {
+    import org.json4s.jackson.JsonMethods._
+    implicit val fmt = _fmt_dep
+    parse(j).extract[DeprecatedProfile]
+  }
 }
