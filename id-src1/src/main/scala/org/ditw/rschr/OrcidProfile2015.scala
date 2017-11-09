@@ -211,8 +211,28 @@ object OrcidProfile_2015 extends Serializable {
     )
   }
 
+  case class ContactEmail(
+                         value:String,
+                         primary:Boolean,
+                         current:Boolean,
+                         verified:Boolean,
+                         visibility:String,
+                         source:String,
+                         source_client_id:String
+                         )
+
+  object Renames_ContactEmail extends Serializable {
+    val source_client_id = "source_client_id"
+    val source_client_id_orig = "source-client-id"
+
+    val renames = FieldSerializer[ContactEmail](
+      renameTo(source_client_id, source_client_id_orig),
+      renameFrom(source_client_id_orig, source_client_id)
+    )
+  }
+
   case class ContactDetails(
-                           email:Array[String],
+                           email:Array[ContactEmail],
                            address:ContactAddr
                            )
 
@@ -489,7 +509,7 @@ object OrcidProfile_2015 extends Serializable {
   }
 
   case class WorkContributor(
-                            orcid:String,
+                            orcid:OrcidIdentifier,
                             credit_name:NameInfo,
                             email:String,
                             attr:ContributorAttr
@@ -912,7 +932,8 @@ object OrcidProfile_2015 extends Serializable {
     Renames_TranslatedTitle.renames +
     Renames_Funding.renames +
     Renames_FundingTitle.renames +
-    Renames_AmountCurrency.renames
+    Renames_AmountCurrency.renames +
+    Renames_ContactEmail.renames
 
   def readJson(j:String):OrcidProfile2015 = {
     import org.json4s.jackson.JsonMethods._
