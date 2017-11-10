@@ -4,15 +4,20 @@ import java.io.{File, FileInputStream, FileOutputStream, InputStream}
 import java.nio.charset.StandardCharsets
 
 import org.apache.commons.io.IOUtils
-import org.ditw.rschr.utils.TgzUtils
+import org.ditw.rschr.utils.{SparkUtils, TgzUtils}
+import org.joda.time.DateTime
+
+import scala.collection.mutable.ListBuffer
 
 object ReadJsonTests extends App {
   import OrcidProfile_2015._
 
-  val otherFolder = "_other_"
-  val nameFolderChars = 3
+  val otherFolder = "__other__"
+  val otherTgzName = "[other].tgz"
+  val emptyTgzName = "[empty]"
+  val nameFolderChars = 4
   val familyNamePartMaxChars = 10
-  val rootFolder = "/media/sf_work/orcid_ext_2017"
+  val rootFolder = "/media/sf_work/orcid_ext_2016"
 
   val InvalidFolderNames = Set("con", "aux")
   def fixFolderName(n:String):String = s"[$n]"
@@ -31,10 +36,7 @@ object ReadJsonTests extends App {
               else fn.value.toLowerCase()
             folderName = folderName.trim
             if (InvalidFolderNames.contains(folderName)) folderName = fixFolderName(folderName)
-            var fnpart = if (fn.value.length > familyNamePartMaxChars) fn.value.substring(0, familyNamePartMaxChars) else fn.value
-            fnpart = fnpart.trim.toLowerCase
-            if (InvalidFolderNames.contains(fnpart)) folderName = fixFolderName(fnpart)
-            s"$folderName/$fnpart"
+            folderName
           }
           else otherFolder
 
@@ -54,15 +56,54 @@ object ReadJsonTests extends App {
         }
         while (!f.exists()) Thread.sleep(200)
 
-        val fo = new File(f, fileName)
-        val fos = new FileOutputStream(fo)
-        IOUtils.write(content, fos, StandardCharsets.UTF_8)
-        fos.close()
+        var tgzName =
+          if (fn != null && fn.value != null) {
+            if (fn.value.length > familyNamePartMaxChars) fn.value.substring(0, familyNamePartMaxChars) else fn.value
+          }
+          else emptyTgzName
+        tgzName = tgzName.trim.toLowerCase + ".tgz"
+        //if (InvalidFolderNames.contains(tgzName)) folderName = fixFolderName(fnpart)
+
+
+          val fo = new File(f, tgzName)
+
+          if (!fo.exists()) {
+            TgzUtils.createTgzFromString(content, fileName, fo.getAbsolutePath)
+          }
+          else {
+            TgzUtils.addString2ExistingTgz(content, fileName, fo.getAbsolutePath)
+          }
+
+          if (!fo.exists()) {
+            println(s"Failed to create/append file [${f.getAbsolutePath}/$tgzName]")
+            val fo1 = new File(f, otherTgzName)
+            println(s"\tTrying to put in ${fo1.getAbsolutePath}")
+            if (!fo1.exists()) {
+              TgzUtils.createTgzFromString(content, fileName, fo1.getAbsolutePath)
+            }
+            else {
+              TgzUtils.addString2ExistingTgz(content, fileName, fo1.getAbsolutePath)
+            }
+          }
+
+//        val fos = new FileOutputStream(fo)
+//        IOUtils.write(content, fos, StandardCharsets.UTF_8)
+//        fos.close()
       }
     }
     else {
       // nothing to save
     }
+  }
+
+  def extractOneRecord(fileName:String, json:String):(String, String, OrcidProfile2015) = {
+    //    val fin = new FileInputStream(recFile)
+    //    val j = IOUtils.toString(fin, StandardCharsets.UTF_8)
+    //    fin.close()
+    val p = readJson(json)
+    val lastSlash = fileName.lastIndexOf('/')
+    val actualFileName = if (lastSlash >= 0) fileName.substring(lastSlash+1) else fileName
+    (actualFileName, json, p)
   }
 
   def parseOneRecord(fileName:String, json:String):String = {
@@ -74,7 +115,7 @@ object ReadJsonTests extends App {
 
       val lastSlash = fileName.lastIndexOf('/')
       val actualFileName = if (lastSlash >= 0) fileName.substring(lastSlash+1) else fileName
-//      saveProfile(p, actualFileName, json)
+      saveProfile(p, actualFileName, json)
       val prf = p.profile
       val act = prf.activities
       val actCount =
@@ -126,22 +167,174 @@ object ReadJsonTests extends App {
     }
   }
 
+  case class EntrySaveInfo(folderName:String, tgzFileName:String, nameInTgz:String, content:String) {
+    private[ReadJsonTests] def getKey:String = s"$folderName/$tgzFileName"
+  }
+
+  private def toEntry(nameInTgz:String, content:String, prf:OrcidProfile2015):EntrySaveInfo = {
+    if (prf.profile != null && prf.profile.bio != null && prf.profile.bio.person_details != null) {
+      val pd = prf.profile.bio.person_details
+      val gn = pd.given_names
+      val fn = pd.family_name
+      val fnFolderName =
+        if (fn != null && fn.value != null && !fn.value.isEmpty) {
+          var folderName =
+            if (fn.value.length >= nameFolderChars) fn.value.substring(0, nameFolderChars).toLowerCase()
+            else fn.value.toLowerCase()
+          folderName = folderName.trim
+          if (InvalidFolderNames.contains(folderName)) folderName = fixFolderName(folderName)
+          folderName
+        }
+        else otherFolder
+      var tgzName =
+        if (fn != null && fn.value != null) {
+          if (fn.value.length > familyNamePartMaxChars) fn.value.substring(0, familyNamePartMaxChars) else fn.value
+        }
+        else emptyTgzName
+      tgzName = tgzName.trim.toLowerCase + ".tgz"
+
+      EntrySaveInfo(fnFolderName, tgzName, nameInTgz, content)
+    }
+    else {
+      EntrySaveInfo(otherFolder, emptyTgzName, nameInTgz, content)
+    }
+  }
+
+  import collection.mutable
+
+  private val spark = SparkUtils.sparkContextLocal()
+  private def batchSave(records:mutable.Map[String, ListBuffer[EntrySaveInfo]]):Unit = {
+    val keys = records.keySet.toSeq
+    val recs:Map[String, Array[EntrySaveInfo]] = records.map(p => p._1 -> p._2.toArray).toMap
+    val brRecords = spark.broadcast(recs)
+    spark.parallelize(keys).foreach { k =>
+      val entries = brRecords.value(k)
+      //println(entries.length)
+      val folderName = entries.head.folderName
+      val tgzName = entries.head.tgzFileName
+      var tgzFileName = s"$rootFolder/$folderName/$tgzName"
+      val tgzFile = new File(tgzFileName)
+      if (tgzFile.exists()) {
+        TgzUtils.add2ExistingTgz(
+          entries.map(e => e.nameInTgz -> e.content),
+          tgzFileName
+        )
+      }
+      else {
+        var folder = new File(s"$rootFolder/$folderName")
+        if (!folder.exists()) folder.mkdirs()
+
+        if (!folder.exists()) {
+          val ofolder = s"$rootFolder/$otherFolder"
+          println(s"Cannot create folder [${folder.getAbsolutePath}], putting in [$ofolder] instead")
+
+          folder = new File(ofolder)
+          folder.mkdirs()
+          if (!folder.exists()) {
+            throw new RuntimeException(s"Failed to create other folder [$otherFolder]")
+          }
+          tgzFileName = s"$ofolder/$tgzName"
+        }
+
+        TgzUtils.createTgz(entries.map(e => e.nameInTgz -> e.content), tgzFileName)
+
+        if (!new File(tgzFileName).exists()) {
+          val ofile = s"${folder.getAbsolutePath}/$otherTgzName"
+          println(s"Cannot create file [$tgzFileName], putting in [$ofile] instead")
+
+          val of = new File(ofile)
+          if (of.exists()) {
+            TgzUtils.add2ExistingTgz(
+              entries.map(e => e.nameInTgz -> e.content),
+              of.getAbsolutePath
+            )
+          }
+          else {
+            TgzUtils.createTgz(
+              entries.map(e => e.nameInTgz -> e.content),
+              of.getAbsolutePath
+            )
+          }
+        }
+      }
+
+    }
+  }
+
+  case class BatchInfo(size:Int) {
+    private var _tgzName2Profiles = mutable.Map[String, ListBuffer[EntrySaveInfo]]()
+    private var _countInBatch = 0
+    private var _prevTs = DateTime.now()
+
+    def addAndCheck(fn:String, json:String, prf:OrcidProfile2015):Unit = {
+      val e = toEntry(fn, json, prf)
+      val k = e.getKey
+      if (!_tgzName2Profiles.contains(k)) _tgzName2Profiles += e.getKey -> ListBuffer()
+      _tgzName2Profiles(k) += e
+
+      _countInBatch = _countInBatch+1
+      if (_countInBatch % size == 0) {
+        val currTs = DateTime.now()
+        val tsDiff = currTs.getMillis - _prevTs.getMillis
+        _prevTs = currTs
+        println(f"Processing batch ${_countInBatch} (todo) (${tsDiff/1000.0}%.2f sec)")
+        val tgzFiles = _tgzName2Profiles.size
+        val entries = _tgzName2Profiles.map(_._2.size).sum
+        println(s"\tSaving in $tgzFiles files ($entries entries)")
+        batchSave(_tgzName2Profiles)
+
+        _tgzName2Profiles = mutable.Map[String, ListBuffer[EntrySaveInfo]]()
+      }
+    }
+  }
+
+  private var batchSize = 10000
+  private val _batchInfo = BatchInfo(batchSize)
+  private def fileHandlerBatchSave(fn:String, is:InputStream):List[String] = {
+    val s = IOUtils.toString(is, StandardCharsets.UTF_8)
+    try {
+      val (n, json, prf) = extractOneRecord(fn, s)
+      _batchInfo.addAndCheck(n, json, prf)
+      List()
+    }
+    catch {
+      case t:Throwable => {
+        try {
+          val deprecated = readDepRecJson(s)
+          val tmp = s"deprecated profile: $fn"
+          println(tmp)
+          List(tmp)
+        }
+        catch {
+          case t1:Throwable => {
+            println(s"failed to process [$fn]")
+            throw t
+          }
+        }
+
+      }
+    }
+  }
+
   val p = "/media/sf_vmshare/ORCID_public_data_file_2016.tar.gz"
   // "/media/sf_vmshare/public_profiles_2017.tar.gz"
   //"/media/sf_vmshare/ORCID_public_data_file_2015.tar.gz"
   val allSummaries = TgzUtils.processTgz(
     p,
     s => s.endsWith(".json"),
-    fileHandler
+    fileHandlerBatchSave
+    //fileHandler
   )
 
-  println(s"Total #: ${allSummaries.size}")
+  spark.stop()
 
-  val t = allSummaries.mkString("\n")
-
-  val fo = new FileOutputStream("/media/sf_vmshare/ORCID_public_data_file_2016_summary.txt")
-  IOUtils.write(t, fo, StandardCharsets.UTF_8)
-  fo.close()
+//  println(s"Total #: ${allSummaries.size}")
+//
+//  val t = allSummaries.mkString("\n")
+//
+//  val fo = new FileOutputStream("/media/sf_vmshare/ORCID_public_data_file_2016_summary.txt")
+//  IOUtils.write(t, fo, StandardCharsets.UTF_8)
+//  fo.close()
 
   //testOneRecord("/media/sf_vmshare/thomas_johnson.json")
 }
