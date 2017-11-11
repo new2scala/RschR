@@ -64,7 +64,12 @@ object TgzUtils {
   def processFilesWithNames[T](path:String, nameFilter:String => Boolean, handler:FileNameContentHandler[T]):List[T] = {
     val bfFileInputStream = new BufferedInputStream(new FileInputStream(path))
 
-    val tarIn = new TarArchiveInputStream(new GzipCompressorInputStream(bfFileInputStream))
+    _processInputWithNames(bfFileInputStream, nameFilter, handler)
+  }
+
+  private def _processInputWithNames[T](is:InputStream, nameFilter:String => Boolean, handler:FileNameContentHandler[T]):List[T] = {
+
+    val tarIn = new TarArchiveInputStream(new GzipCompressorInputStream(is))
     var tarEntry = tarIn.getNextEntry
 
     var tarEntryIdx = 0
@@ -220,6 +225,121 @@ object TgzUtils {
     }
   }
 
+  def mergeExistingTgzStreams(bytes1:Array[Byte], bytes2:Array[Byte]):Array[Byte] = {
+    val tarInStream1 = new ByteArrayInputStream(bytes1)
+
+    val bstr = new ByteArrayOutputStream()
+    val bfStream = new BufferedOutputStream(bstr)
+    val tgzOut = new TarArchiveOutputStream(new GzipCompressorOutputStream(bfStream))
+
+    val existingNames:List[String] = _processInputWithNames(
+      tarInStream1,
+      (str:String) => true, // accept all the existing entries
+      (fn:String, is:InputStream) => {
+        val tgzEntry = new TarArchiveEntry(new File(fn), fn) // new TarArchiveEntry(f2Add, entryName)
+        val bytes = IOUtils.toByteArray(is)
+        tgzEntry.setSize(bytes.length.toLong)
+        tgzOut.putArchiveEntry(tgzEntry)
+        IOUtils.write(bytes, tgzOut)
+        tgzOut.closeArchiveEntry()
+        fn
+      }
+    )
+
+    val lowercasedSet = existingNames.map(_.toLowerCase).toSet
+
+    val tarInStream2 = new ByteArrayInputStream(bytes2)
+    _processInputWithNames(
+      tarInStream2,
+      (str:String) => true, // accept all the existing entries
+      (fn:String, is:InputStream) => {
+        if (lowercasedSet.contains(fn.toLowerCase())) {
+          println(s"[$fn] already exists, will overwrite")
+        }
+        val tgzEntry = new TarArchiveEntry(new File(fn), fn) // new TarArchiveEntry(f2Add, entryName)
+        val bytes = IOUtils.toByteArray(is)
+        tgzEntry.setSize(bytes.length.toLong)
+        tgzOut.putArchiveEntry(tgzEntry)
+        IOUtils.write(bytes, tgzOut)
+        tgzOut.closeArchiveEntry()
+        fn
+      }
+    )
+
+    try {
+      tgzOut.finish()
+      tgzOut.close()
+
+      bstr.toByteArray
+
+    }
+    catch {
+      case t:Throwable => {
+        println(s"Error creating tgz archive: ${t.getMessage}")
+        if (tgzOut != null) {
+          tgzOut.close()
+        }
+        throw t
+      }
+    }
+  }
+
+
+  def add2ExistingTgzStream(contents:Iterable[(String, String)], bytes:Array[Byte]):Array[Byte] = {
+    val tarInStream = new ByteArrayInputStream(bytes)
+
+    val bstr = new ByteArrayOutputStream()
+    val bfStream = new BufferedOutputStream(bstr)
+    val tgzOut = new TarArchiveOutputStream(new GzipCompressorOutputStream(bfStream))
+
+    val existingNames:List[String] = _processInputWithNames(
+      tarInStream,
+      (str:String) => true, // accept all the existing entries
+      (fn:String, is:InputStream) => {
+        val tgzEntry = new TarArchiveEntry(new File(fn), fn) // new TarArchiveEntry(f2Add, entryName)
+        val bytes = IOUtils.toByteArray(is)
+        tgzEntry.setSize(bytes.length.toLong)
+        tgzOut.putArchiveEntry(tgzEntry)
+        IOUtils.write(bytes, tgzOut)
+        tgzOut.closeArchiveEntry()
+        fn
+      }
+    )
+
+    val lowercasedSet = existingNames.map(_.toLowerCase).toSet
+
+    try {
+
+      contents.foreach { p =>
+        val entryName = p._1
+        val json = p._2
+
+        if (lowercasedSet.contains(entryName.toLowerCase()))
+          println(s"[$entryName] already exists, will overwrite")
+        val bytes = json.getBytes(StandardCharsets.UTF_8)
+        val bs = new ByteArrayInputStream(bytes)
+        add2Tgz(tgzOut, bs, entryName, bytes.length)
+        bs.close()
+
+      }
+
+      tgzOut.finish()
+      tgzOut.close()
+
+      bstr.toByteArray
+
+    }
+    catch {
+      case t:Throwable => {
+        println(s"Error creating tgz archive: ${t.getMessage}")
+        if (tgzOut != null) {
+          tgzOut.close()
+        }
+        throw t
+      }
+    }
+  }
+
   def add2ExistingTgz(is:InputStream, entryName:String, size:Long, dstFile:String):Unit = {
     val tarInFile = new File(dstFile)
     if (!tarInFile.exists) throw new IllegalArgumentException(s"Input Tgz file [$dstFile] not found!")
@@ -300,6 +420,38 @@ object TgzUtils {
     catch {
       case t:Throwable => {
         println(s"Error creating tgz archive: ${t.getMessage}")
+      }
+    }
+    finally {
+      if (tgzOut != null) {
+        tgzOut.finish()
+        tgzOut.close()
+      }
+    }
+  }
+
+  def createInMemTgz(contents:Iterable[(String, String)]):ByteArrayOutputStream = {
+    var tgzOut:TarArchiveOutputStream = null
+    val baStream = new ByteArrayOutputStream()
+    try {
+
+      val bfStream = new BufferedOutputStream(baStream)
+      tgzOut = new TarArchiveOutputStream(new GzipCompressorOutputStream(bfStream))
+      contents.foreach { p =>
+        val entryName = p._1
+        val json = p._2
+        val bytes = json.getBytes(StandardCharsets.UTF_8)
+        val bs = new ByteArrayInputStream(bytes)
+        add2Tgz(tgzOut, bs, entryName, bytes.length)
+        bs.close()
+      }
+      baStream
+
+    }
+    catch {
+      case t:Throwable => {
+        println(s"Error creating tgz archive: ${t.getMessage}")
+        null
       }
     }
     finally {

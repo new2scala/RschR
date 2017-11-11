@@ -13,9 +13,9 @@ object ReadJsonTests extends App {
   import OrcidProfile_2015._
 
   val otherFolder = "__other__"
-  val otherTgzName = "[other].tgz"
+  val otherTgzName = "[other]"
   val emptyTgzName = "[empty]"
-  val nameFolderChars = 4
+  val nameFolderChars = 3
   val familyNamePartMaxChars = 10
   val rootFolder = "/media/sf_work/orcid_ext_2016"
 
@@ -61,7 +61,7 @@ object ReadJsonTests extends App {
             if (fn.value.length > familyNamePartMaxChars) fn.value.substring(0, familyNamePartMaxChars) else fn.value
           }
           else emptyTgzName
-        tgzName = tgzName.trim.toLowerCase + ".tgz"
+        tgzName = tgzName.trim.toLowerCase.replace(' ', '_')
         //if (InvalidFolderNames.contains(tgzName)) folderName = fixFolderName(fnpart)
 
 
@@ -191,7 +191,7 @@ object ReadJsonTests extends App {
           if (fn.value.length > familyNamePartMaxChars) fn.value.substring(0, familyNamePartMaxChars) else fn.value
         }
         else emptyTgzName
-      tgzName = tgzName.trim.toLowerCase + ".tgz"
+      tgzName = tgzName.trim.toLowerCase.replace(' ', '_')
 
       EntrySaveInfo(fnFolderName, tgzName, nameInTgz, content)
     }
@@ -200,69 +200,184 @@ object ReadJsonTests extends App {
     }
   }
 
+  private def findNextFileName(folderName:String, tgzName:String):String = {
+    val folderPath = s"$rootFolder/$folderName"
+    var fileIndex = 1
+    var tgzFileName = f"$folderPath/$tgzName-$fileIndex%04d.tgz"
+    var tgzFile = new File(tgzFileName)
+    while (tgzFile.exists()) {
+      fileIndex = fileIndex+1
+      tgzFileName = f"$folderPath/$tgzName-$fileIndex%04d.tgz"
+      tgzFile = new File(tgzFileName)
+    }
+    tgzFileName
+  }
+
+  private def saveAsOther(content:Array[Byte]):Unit = {
+    val tgzFileName2 = findNextFileName(otherFolder, otherTgzName)
+    val of2 = new File(tgzFileName2)
+    val ofs2 = new FileOutputStream(tgzFileName2)
+    IOUtils.write(content, ofs2)
+    ofs2.close()
+
+    if (!of2.exists())
+      println(s"\tFailed to create [$tgzFileName2], abort saving!")
+  }
+
+  def saveOne(fn:String, content:Array[Byte]):Unit = {
+    val firstSlash = fn.indexOf('/')
+    val folderName = fn.substring(0, firstSlash)
+    val tgzName = fn.substring(firstSlash+1)
+
+    val tgzFileName = findNextFileName(folderName, tgzName)
+    val folderPath = new File(s"$rootFolder/$folderName")
+    if (!folderPath.exists()) folderPath.mkdirs()
+
+    if (folderPath.exists()) {
+      val of = new File(tgzFileName)
+      val ofs = new FileOutputStream(tgzFileName)
+      IOUtils.write(content, ofs)
+      ofs.close()
+
+      if (!of.exists()) {
+        // failed somehow
+        println(s"Failed to create [$tgzFileName], try saving it in 'other' folder")
+        saveAsOther(content)
+      }
+    }
+    else {
+      println(s"Failed to create folder [$folderPath], try saving it in 'other' folder")
+      saveAsOther(content)
+    }
+
+  }
+
+
   import collection.mutable
 
+  def saveTopN(tgzName2Bytes:mutable.Map[String,Array[Byte]], percentage:Double):mutable.Map[String,Array[Byte]] = {
+    val c = (percentage*tgzName2Bytes.size).toInt
+    println(f"Saving top $percentage%.3f of the remaining data (#: $c/${tgzName2Bytes.size})...")
+    val sorted = tgzName2Bytes.toList.sortBy(-_._2.length)
+
+    val rem = mutable.Map[String,Array[Byte]]()
+    var idx = 0
+    sorted.foreach { p =>
+      val k = p._1
+      val s = p._2
+      idx = idx + 1
+      if (idx <= c) {
+        saveOne(k, s)
+        if (idx % 100 == 0) println(s"\t$idx saved")
+      }
+      else rem += k -> s
+
+    }
+    rem
+  }
+
+  private val SaveFileSizeThreshold = 102400
+  private val ThresholdCount_SavePercentage = 100000
+  private val SavePercentage = 0.01
   private val spark = SparkUtils.sparkContextLocal()
-  private def batchSave(records:mutable.Map[String, ListBuffer[EntrySaveInfo]]):Unit = {
+  private def batchSave(
+                         records:mutable.Map[String, ListBuffer[EntrySaveInfo]],
+                         tgzName2Bytes:mutable.Map[String,Array[Byte]]
+                       ):mutable.Map[String,Array[Byte]] = {
     val keys = records.keySet.toSeq
     val recs:Map[String, Array[EntrySaveInfo]] = records.map(p => p._1 -> p._2.toArray).toMap
     val brRecords = spark.broadcast(recs)
-    spark.parallelize(keys).foreach { k =>
+    val newName2Bytes = spark.parallelize(keys).map { k =>
       val entries = brRecords.value(k)
-      //println(entries.length)
-      val folderName = entries.head.folderName
-      val tgzName = entries.head.tgzFileName
-      var tgzFileName = s"$rootFolder/$folderName/$tgzName"
-      val tgzFile = new File(tgzFileName)
-      if (tgzFile.exists()) {
-        TgzUtils.add2ExistingTgz(
-          entries.map(e => e.nameInTgz -> e.content),
-          tgzFileName
-        )
+      val bs = TgzUtils.createInMemTgz(entries.map(e => e.nameInTgz -> e.content))
+      val bytes = bs.toByteArray
+      bs.close()
+      k -> bytes
+    }.collect().toMap
+
+    newName2Bytes.keys.foreach { k =>
+      if (tgzName2Bytes.contains(k)) {
+        val merged = TgzUtils.mergeExistingTgzStreams(tgzName2Bytes(k), newName2Bytes(k))
+        tgzName2Bytes += k -> merged
       }
-      else {
-        var folder = new File(s"$rootFolder/$folderName")
-        if (!folder.exists()) folder.mkdirs()
-
-        if (!folder.exists()) {
-          val ofolder = s"$rootFolder/$otherFolder"
-          println(s"Cannot create folder [${folder.getAbsolutePath}], putting in [$ofolder] instead")
-
-          folder = new File(ofolder)
-          folder.mkdirs()
-          if (!folder.exists()) {
-            throw new RuntimeException(s"Failed to create other folder [$otherFolder]")
-          }
-          tgzFileName = s"$ofolder/$tgzName"
-        }
-
-        TgzUtils.createTgz(entries.map(e => e.nameInTgz -> e.content), tgzFileName)
-
-        if (!new File(tgzFileName).exists()) {
-          val ofile = s"${folder.getAbsolutePath}/$otherTgzName"
-          println(s"Cannot create file [$tgzFileName], putting in [$ofile] instead")
-
-          val of = new File(ofile)
-          if (of.exists()) {
-            TgzUtils.add2ExistingTgz(
-              entries.map(e => e.nameInTgz -> e.content),
-              of.getAbsolutePath
-            )
-          }
-          else {
-            TgzUtils.createTgz(
-              entries.map(e => e.nameInTgz -> e.content),
-              of.getAbsolutePath
-            )
-          }
-        }
-      }
-
+      else tgzName2Bytes += k -> newName2Bytes(k)
     }
+
+    println(s"Before saving #: ${tgzName2Bytes.size}")
+
+    if (tgzName2Bytes.size > ThresholdCount_SavePercentage)
+      saveTopN(tgzName2Bytes, SavePercentage)
+    else {
+      val rem = mutable.Map[String,Array[Byte]]()
+      tgzName2Bytes.keys.foreach { k =>
+        val s = tgzName2Bytes(k)
+        if (s.length >= SaveFileSizeThreshold) {
+          saveOne(k, s)
+          println(s"Data for key [$k] saved")
+        }
+        else {
+          rem += k -> s
+        }
+      }
+      println(s"After saving #: ${rem.size}")
+      rem
+    }
+//      val entries = brRecords.value(k)
+//      //println(entries.length)
+//      val folderName = entries.head.folderName
+//      val tgzName = entries.head.tgzFileName
+//      var tgzFileName = s"$rootFolder/$folderName/$tgzName"
+//      val tgzFile = new File(tgzFileName)
+//      if (tgzFile.exists()) {
+//        TgzUtils.add2ExistingTgz(
+//          entries.map(e => e.nameInTgz -> e.content),
+//          tgzFileName
+//        )
+//      }
+//      else {
+//        var folder = new File(s"$rootFolder/$folderName")
+//        if (!folder.exists()) folder.mkdirs()
+//
+//        if (!folder.exists()) {
+//          val ofolder = s"$rootFolder/$otherFolder"
+//          println(s"Cannot create folder [${folder.getAbsolutePath}], putting in [$ofolder] instead")
+//
+//          folder = new File(ofolder)
+//          folder.mkdirs()
+//          if (!folder.exists()) {
+//            throw new RuntimeException(s"Failed to create other folder [$otherFolder]")
+//          }
+//          tgzFileName = s"$ofolder/$tgzName"
+//        }
+//
+//        TgzUtils.createTgz(entries.map(e => e.nameInTgz -> e.content), tgzFileName)
+//
+//        if (!new File(tgzFileName).exists()) {
+//          val ofile = s"${folder.getAbsolutePath}/$otherTgzName"
+//          println(s"Cannot create file [$tgzFileName], putting in [$ofile] instead")
+//
+//          val of = new File(ofile)
+//          if (of.exists()) {
+//            TgzUtils.add2ExistingTgz(
+//              entries.map(e => e.nameInTgz -> e.content),
+//              of.getAbsolutePath
+//            )
+//          }
+//          else {
+//            TgzUtils.createTgz(
+//              entries.map(e => e.nameInTgz -> e.content),
+//              of.getAbsolutePath
+//            )
+//          }
+//        }
+//      }
+
+//    }
   }
 
   case class BatchInfo(size:Int) {
     private var _tgzName2Profiles = mutable.Map[String, ListBuffer[EntrySaveInfo]]()
+    private var _tgzName2Bytes = mutable.Map[String,Array[Byte]]()
     private var _countInBatch = 0
     private var _prevTs = DateTime.now()
 
@@ -277,13 +392,26 @@ object ReadJsonTests extends App {
         val currTs = DateTime.now()
         val tsDiff = currTs.getMillis - _prevTs.getMillis
         _prevTs = currTs
-        println(f"Processing batch ${_countInBatch} (todo) (${tsDiff/1000.0}%.2f sec)")
+        println(f"Processing batch ${_countInBatch} (${tsDiff/1000.0}%.2f sec)")
         val tgzFiles = _tgzName2Profiles.size
         val entries = _tgzName2Profiles.map(_._2.size).sum
         println(s"\tSaving in $tgzFiles files ($entries entries)")
-        batchSave(_tgzName2Profiles)
+
+        _tgzName2Bytes = batchSave(_tgzName2Profiles, _tgzName2Bytes)
 
         _tgzName2Profiles = mutable.Map[String, ListBuffer[EntrySaveInfo]]()
+      }
+    }
+
+    def saveAllRem():Unit = {
+      var count = 0
+      println(s"Saving all the remaining data (#: ${_tgzName2Bytes.size})...")
+      _tgzName2Bytes.keys.foreach { k =>
+        val s = _tgzName2Bytes(k)
+        saveOne(k, s)
+
+        count = count + 1
+        if (count % 500 == 0) println(s"\t$count saved")
       }
     }
   }
