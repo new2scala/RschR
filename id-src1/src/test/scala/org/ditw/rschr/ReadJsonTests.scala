@@ -17,7 +17,6 @@ object ReadJsonTests extends App {
   val emptyTgzName = "[empty]"
   val nameFolderChars = 3
   val familyNamePartMaxChars = 10
-  val rootFolder = "/media/sf_work/orcid_ext_2016"
 
   val InvalidFolderNames = Set("con", "aux")
   def fixFolderName(n:String):String = s"[$n]"
@@ -214,6 +213,8 @@ object ReadJsonTests extends App {
   }
 
   private def saveAsOther(content:Array[Byte]):Unit = {
+    val folderPath = new File(s"$rootFolder/$otherFolder")
+    if (!folderPath.exists()) folderPath.mkdirs()
     val tgzFileName2 = findNextFileName(otherFolder, otherTgzName)
     val of2 = new File(tgzFileName2)
     val ofs2 = new FileOutputStream(tgzFileName2)
@@ -235,9 +236,17 @@ object ReadJsonTests extends App {
 
     if (folderPath.exists()) {
       val of = new File(tgzFileName)
-      val ofs = new FileOutputStream(tgzFileName)
-      IOUtils.write(content, ofs)
-      ofs.close()
+
+      try {
+        val ofs = new FileOutputStream(tgzFileName)
+        IOUtils.write(content, ofs)
+        ofs.close()
+      }
+      catch {
+        case t:Throwable => {
+          println(s"Exception: failed to create file [$tgzFileName], ${t.getMessage}")
+        }
+      }
 
       if (!of.exists()) {
         // failed somehow
@@ -278,7 +287,7 @@ object ReadJsonTests extends App {
 
   private val SaveFileSizeThreshold = 102400
   private val ThresholdCount_SavePercentage = 100000
-  private val SavePercentage = 0.01
+  private val SavePercentage = 0.002
   private val spark = SparkUtils.sparkContextLocal()
   private def batchSave(
                          records:mutable.Map[String, ListBuffer[EntrySaveInfo]],
@@ -305,8 +314,11 @@ object ReadJsonTests extends App {
 
     println(s"Before saving #: ${tgzName2Bytes.size}")
 
-    if (tgzName2Bytes.size > ThresholdCount_SavePercentage)
-      saveTopN(tgzName2Bytes, SavePercentage)
+    if (tgzName2Bytes.size > ThresholdCount_SavePercentage) {
+      val rem = saveTopN(tgzName2Bytes, SavePercentage)
+      println(s"After saving #: ${rem.size}")
+      rem
+    }
     else {
       val rem = mutable.Map[String,Array[Byte]]()
       tgzName2Bytes.keys.foreach { k =>
@@ -381,6 +393,20 @@ object ReadJsonTests extends App {
     private var _countInBatch = 0
     private var _prevTs = DateTime.now()
 
+    private def updateBatch():Unit = {
+      val currTs = DateTime.now()
+      val tsDiff = currTs.getMillis - _prevTs.getMillis
+      _prevTs = currTs
+      println(f"Processing batch ${_countInBatch} (${tsDiff/1000.0}%.2f sec)")
+      val tgzFiles = _tgzName2Profiles.size
+      val entries = _tgzName2Profiles.map(_._2.size).sum
+      println(s"\tSaving in $tgzFiles files ($entries entries)")
+
+      _tgzName2Bytes = batchSave(_tgzName2Profiles, _tgzName2Bytes)
+      _tgzName2Profiles = mutable.Map[String, ListBuffer[EntrySaveInfo]]()
+
+    }
+
     def addAndCheck(fn:String, json:String, prf:OrcidProfile2015):Unit = {
       val e = toEntry(fn, json, prf)
       val k = e.getKey
@@ -389,30 +415,35 @@ object ReadJsonTests extends App {
 
       _countInBatch = _countInBatch+1
       if (_countInBatch % size == 0) {
-        val currTs = DateTime.now()
-        val tsDiff = currTs.getMillis - _prevTs.getMillis
-        _prevTs = currTs
-        println(f"Processing batch ${_countInBatch} (${tsDiff/1000.0}%.2f sec)")
-        val tgzFiles = _tgzName2Profiles.size
-        val entries = _tgzName2Profiles.map(_._2.size).sum
-        println(s"\tSaving in $tgzFiles files ($entries entries)")
-
-        _tgzName2Bytes = batchSave(_tgzName2Profiles, _tgzName2Bytes)
-
-        _tgzName2Profiles = mutable.Map[String, ListBuffer[EntrySaveInfo]]()
+        updateBatch
       }
     }
 
     def saveAllRem():Unit = {
+      updateBatch
       var count = 0
+      var saveCount = 0
       println(s"Saving all the remaining data (#: ${_tgzName2Bytes.size})...")
-      _tgzName2Bytes.keys.foreach { k =>
-        val s = _tgzName2Bytes(k)
-        saveOne(k, s)
+      val remPairs = _tgzName2Bytes.toList
+      var bytes = Array[Byte]()
+      remPairs.foreach { k =>
+        val s = k._2
+        if (bytes.isEmpty) bytes = s
+        else {
+          bytes = TgzUtils.mergeExistingTgzStreams(bytes, s)
+          if (bytes.length > SaveFileSizeThreshold) {
+            saveAsOther(bytes)
+            bytes = Array[Byte]()
+            saveCount = saveCount + 1
+            if (saveCount % 500 == 0) println(s"======= \t$saveCount saved")
+          }
+        }
 
         count = count + 1
-        if (count % 500 == 0) println(s"\t$count saved")
+        if (count % 500 == 0) println(s"\t$count processed")
       }
+
+      if (bytes.nonEmpty) saveAsOther(bytes)
     }
   }
 
@@ -444,7 +475,9 @@ object ReadJsonTests extends App {
     }
   }
 
+  val rootFolder = "/media/sf_work/orcid_2016" //"/media/sf_work/orcid_2016"
   val p = "/media/sf_vmshare/ORCID_public_data_file_2016.tar.gz"
+  // "/media/sf_vmshare/ORCID_public_data_file_2016.tar.gz"
   // "/media/sf_vmshare/public_profiles_2017.tar.gz"
   //"/media/sf_vmshare/ORCID_public_data_file_2015.tar.gz"
   val allSummaries = TgzUtils.processTgz(
@@ -453,6 +486,8 @@ object ReadJsonTests extends App {
     fileHandlerBatchSave
     //fileHandler
   )
+
+  _batchInfo.saveAllRem()
 
   spark.stop()
 
