@@ -287,7 +287,7 @@ object ReadJsonTests extends App {
 
   private val SaveFileSizeThreshold = 102400
   private val ThresholdCount_SavePercentage = 100000
-  private val SavePercentage = 0.002
+  private val SavePercentage = 0.001
   private val spark = SparkUtils.sparkContextLocal()
   private def batchSave(
                          records:mutable.Map[String, ListBuffer[EntrySaveInfo]],
@@ -296,12 +296,21 @@ object ReadJsonTests extends App {
     val keys = records.keySet.toSeq
     val recs:Map[String, Array[EntrySaveInfo]] = records.map(p => p._1 -> p._2.toArray).toMap
     val brRecords = spark.broadcast(recs)
-    val newName2Bytes = spark.parallelize(keys).map { k =>
+    val newName2Bytes = spark.parallelize(keys).flatMap { k =>
       val entries = brRecords.value(k)
-      val bs = TgzUtils.createInMemTgz(entries.map(e => e.nameInTgz -> e.content))
-      val bytes = bs.toByteArray
-      bs.close()
-      k -> bytes
+      try {
+        val bs = TgzUtils.createInMemTgz(entries.map(e => e.nameInTgz -> e.content))
+        val bytes = bs.toByteArray
+        bs.close()
+        Option(k -> bytes)
+      }
+      catch {
+        case t:Throwable => {
+          println(s"xxxxxxxxxxxxxxxxxxxx Failed to process entries of key [$k]: ${t.getMessage}")
+          None
+          //throw t
+        }
+      }
     }.collect().toMap
 
     newName2Bytes.keys.foreach { k =>
@@ -419,31 +428,34 @@ object ReadJsonTests extends App {
       }
     }
 
+    private val SaveAllFileSizeThreshold = 1024*20
     def saveAllRem():Unit = {
       updateBatch
       var count = 0
       var saveCount = 0
       println(s"Saving all the remaining data (#: ${_tgzName2Bytes.size})...")
       val remPairs = _tgzName2Bytes.toList
-      var bytes = Array[Byte]()
+      //var bytes = Array[Byte]()
+      var byteArrays = ListBuffer[Array[Byte]]()
       remPairs.foreach { k =>
         val s = k._2
-        if (bytes.isEmpty) bytes = s
-        else {
-          bytes = TgzUtils.mergeExistingTgzStreams(bytes, s)
-          if (bytes.length > SaveFileSizeThreshold) {
-            saveAsOther(bytes)
-            bytes = Array[Byte]()
-            saveCount = saveCount + 1
-            if (saveCount % 500 == 0) println(s"======= \t$saveCount saved")
-          }
+        byteArrays += s
+        if (byteArrays.length > SaveAllFileSizeThreshold) {
+          val bytes = TgzUtils.mergeExistingTgzStreams(byteArrays)
+          saveAsOther(bytes)
+          byteArrays = ListBuffer[Array[Byte]]()
+          saveCount = saveCount + 1
+          if (saveCount % 500 == 0) println(s"======= \t$saveCount saved")
         }
 
         count = count + 1
         if (count % 500 == 0) println(s"\t$count processed")
       }
 
-      if (bytes.nonEmpty) saveAsOther(bytes)
+      if (byteArrays.nonEmpty) {
+        val bytes = TgzUtils.mergeExistingTgzStreams(byteArrays)
+        saveAsOther(bytes)
+      }
     }
   }
 
@@ -475,8 +487,8 @@ object ReadJsonTests extends App {
     }
   }
 
-  val rootFolder = "/media/sf_work/orcid_2016" //"/media/sf_work/orcid_2016"
-  val p = "/media/sf_vmshare/ORCID_public_data_file_2016.tar.gz"
+  val rootFolder = "/media/sf_work/orcid_2017" //"/media/sf_work/orcid_2016"
+  val p = "/media/sf_vmshare/public_profiles_2017.tar.gz"
   // "/media/sf_vmshare/ORCID_public_data_file_2016.tar.gz"
   // "/media/sf_vmshare/public_profiles_2017.tar.gz"
   //"/media/sf_vmshare/ORCID_public_data_file_2015.tar.gz"

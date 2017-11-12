@@ -284,6 +284,68 @@ object TgzUtils {
     }
   }
 
+  def mergeExistingTgzStreams(bytes:Iterable[Array[Byte]]):Array[Byte] = {
+    val bstr = new ByteArrayOutputStream()
+    val bfStream = new BufferedOutputStream(bstr)
+    val tgzOut = new TarArchiveOutputStream(new GzipCompressorOutputStream(bfStream))
+
+    //    val tarInStream1 = new ByteArrayInputStream(bytes1)
+//
+//
+//    val existingNames:List[String] = _processInputWithNames(
+//      tarInStream1,
+//      (str:String) => true, // accept all the existing entries
+//      (fn:String, is:InputStream) => {
+//        val tgzEntry = new TarArchiveEntry(new File(fn), fn) // new TarArchiveEntry(f2Add, entryName)
+//        val bytes = IOUtils.toByteArray(is)
+//        tgzEntry.setSize(bytes.length.toLong)
+//        tgzOut.putArchiveEntry(tgzEntry)
+//        IOUtils.write(bytes, tgzOut)
+//        tgzOut.closeArchiveEntry()
+//        fn
+//      }
+//    )
+//
+//    val lowercasedSet = existingNames.map(_.toLowerCase).toSet
+
+    bytes.foreach { bytes2 =>
+      val tarInStream2 = new ByteArrayInputStream(bytes2)
+      _processInputWithNames(
+        tarInStream2,
+        (str:String) => true, // accept all the existing entries
+        (fn:String, is:InputStream) => {
+//          if (lowercasedSet.contains(fn.toLowerCase())) {
+//            println(s"[$fn] already exists, will overwrite")
+//          }
+          val tgzEntry = new TarArchiveEntry(new File(fn), fn) // new TarArchiveEntry(f2Add, entryName)
+          val bytes = IOUtils.toByteArray(is)
+          tgzEntry.setSize(bytes.length.toLong)
+          tgzOut.putArchiveEntry(tgzEntry)
+          IOUtils.write(bytes, tgzOut)
+          tgzOut.closeArchiveEntry()
+          fn
+        }
+      )
+    }
+
+    try {
+      tgzOut.finish()
+      tgzOut.close()
+
+      bstr.toByteArray
+
+    }
+    catch {
+      case t:Throwable => {
+        println(s"Error creating tgz archive: ${t.getMessage}")
+        if (tgzOut != null) {
+          tgzOut.close()
+        }
+        throw t
+      }
+    }
+  }
+
 
   def add2ExistingTgzStream(contents:Iterable[(String, String)], bytes:Array[Byte]):Array[Byte] = {
     val tarInStream = new ByteArrayInputStream(bytes)
