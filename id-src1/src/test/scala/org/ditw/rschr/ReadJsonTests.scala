@@ -487,8 +487,8 @@ object ReadJsonTests extends App {
     }
   }
 
-  val rootFolder = "/media/sf_work/orcid_2017" //"/media/sf_work/orcid_2016"
-  val p = "/media/sf_vmshare/public_profiles_2017.tar.gz"
+  val rootFolder = "/media/sf_work/orcid_2015" //"/media/sf_work/orcid_2016"
+  val p = "/media/sf_vmshare/ORCID_public_data_file_2015.tar.gz"
   // "/media/sf_vmshare/ORCID_public_data_file_2016.tar.gz"
   // "/media/sf_vmshare/public_profiles_2017.tar.gz"
   //"/media/sf_vmshare/ORCID_public_data_file_2015.tar.gz"
