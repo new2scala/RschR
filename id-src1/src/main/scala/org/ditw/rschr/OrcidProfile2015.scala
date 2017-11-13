@@ -793,8 +793,25 @@ object OrcidProfile_2015 extends Serializable {
       renameFrom(works_orig, works) orElse
         renameFrom(funding_list_orig, funding_list)
     )
-
   }
+
+  private def countActivityEids(acts:Array[OrcidWork]):Map[String,Int] = {
+    import collection.mutable
+
+    val r = mutable.Map[String,Int]()
+
+    acts.foreach { act =>
+      if (act.work_ext_ids != null && act.work_ext_ids.ext_ids.nonEmpty) {
+        act.work_ext_ids.ext_ids.foreach { eid =>
+          if (!r.contains(eid.id_type)) r += eid.id_type -> 0
+          r(eid.id_type) = r(eid.id_type)+1
+        }
+      }
+    }
+    r.toMap
+  }
+
+
   case class Profile2015(
     orcid:String,
     orcid_id:String,
@@ -808,7 +825,48 @@ object OrcidProfile_2015 extends Serializable {
     _type:String,
     group_type:String,
     client_type:String
-  )
+  ) {
+
+    def hasAffInfo:Boolean =
+      activities != null && activities.affiliations != null && activities.affiliations.affiliation.length > 0
+
+    def activityCount:Int = {
+      if (activities != null && activities.works != null && activities.works.work != null)
+        activities.works.work.length
+      else 0
+    }
+    def hasActivities:Boolean = activityCount > 0
+
+    def name:Option[String] =
+      if (bio != null && bio.person_details != null) {
+        val fn = bio.person_details.family_name
+        val gn = bio.person_details.given_names
+        if (fn != null && gn != null)
+          Option(s"${gn.value} ${fn.value}")
+        else None
+      }
+      else None
+
+    def affInfoTrace:String =
+      if (hasAffInfo) {
+        val count = activities.affiliations.affiliation.length
+        val currentAffs = activities.affiliations.affiliation.filter(_.end_date == null)
+
+        val affInfo = currentAffs.map(_.organization.name).mkString("[", "],[", "]")
+        s"$affInfo (total: $count)"
+      }
+      else "[Empty]"
+
+    def actInfoTrace:String =
+      if (hasActivities) {
+        val count = activities.works.work.length
+        val eidMap = countActivityEids(activities.works.work)
+        val eidCounts = eidMap.toList.sortBy(_._1).map(p => s"${p._1}:${p._2}").mkString("[", ",", "]")
+        s"$eidCounts (total: $count)"
+      }
+      else "[Empty]"
+
+  }
 
   object Renames_Profile2015 extends Serializable {
     val orcid_id = "orcid_id"
