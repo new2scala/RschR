@@ -868,6 +868,22 @@ object OrcidProfile_2015 extends Serializable {
 
   }
 
+  case class ActEid(t:String, v:String)
+  case class ActivityExt(title:String, eids:Array[ActEid])
+
+  case class ProfileExt(
+                       orcid:String,
+                       name:String,
+                       aff:String,
+                       actExtracts:Array[ActivityExt]
+                       )
+
+  def profileExt2Json(p:ProfileExt):String = {
+    import org.json4s.jackson.Serialization._
+    implicit val fmt = DefaultFormats
+    write(p)
+  }
+
   object Renames_Profile2015 extends Serializable {
     val orcid_id = "orcid_id"
     val orcid_id_orig = "orcid-id"
