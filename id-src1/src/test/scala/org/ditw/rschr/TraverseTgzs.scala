@@ -89,7 +89,9 @@ object TraverseTgzs extends App {
             else "[NoTitle]"
           val eids:Array[ActEid] =
             if (w.work_ext_ids != null && w.work_ext_ids.ext_ids != null)
-              w.work_ext_ids.ext_ids.map(eid => ActEid(eid.id_type, eid.id_value.value))
+              w.work_ext_ids.ext_ids.flatMap(eid =>
+                if (eid.id_value != null) Option(ActEid(eid.id_type, eid.id_value.value)) else None
+              )
             else Array()
           ActivityExt(t, eids)
         }
