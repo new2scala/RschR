@@ -436,7 +436,16 @@ object OrcidProfile_2015 extends Serializable {
                       title:StringInfo,
                       subtitle:StringInfo,
                       translated_title:TranslatedTitle
-                      )
+                      ) {
+    override def toString:String = {
+      var r = title.value
+      if (subtitle != null && subtitle.value != null)
+        r = s"$r|||${subtitle.value}"
+      if (translated_title != null && translated_title.value != null)
+        r = s"$r|||${translated_title.value}"
+      r
+    }
+  }
 
   object Renames_WorkTitle extends Serializable {
     val translated_title = "translated_title"
@@ -479,7 +488,14 @@ object OrcidProfile_2015 extends Serializable {
     )
   }
 
-  case class WorkExtIds(ext_ids:Array[WorkExtId], scope:String)
+  val EmptyMap = Map[String,String]()
+
+  case class WorkExtIds(ext_ids:Array[WorkExtId], scope:String) {
+    def hasExtIds:Boolean = ext_ids != null && ext_ids.length > 0
+    def getExtIdMap:Map[String, String] =
+      if (hasExtIds) ext_ids.map(eid => eid.id_type.trim.toLowerCase -> eid.id_value.value.trim).toMap
+      else EmptyMap
+  }
 
   object Renames_WorkExtIds extends Serializable {
     val ext_ids = "ext_ids"
@@ -563,6 +579,9 @@ object OrcidProfile_2015 extends Serializable {
                       country:ContactAddrCountry,
                       visibility:String
                       )
+  {
+    def hasExtIds:Boolean = work_ext_ids != null && work_ext_ids.hasExtIds
+  }
 
   object Renames_OrcidWork extends Serializable {
     val put_code = "put_code"
@@ -777,7 +796,9 @@ object OrcidProfile_2015 extends Serializable {
     affiliations:Affiliations,
     works:OrcidWorks,
     funding_list:FundingList
-  )
+  ) {
+    def hasWorks:Boolean = works != null && works.work != null && works.work.length > 0
+  }
 
   object Renames_OrcidActivities extends Serializable {
 

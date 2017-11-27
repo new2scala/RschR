@@ -4,6 +4,7 @@ import java.io.{File, FileInputStream, FileOutputStream, InputStream}
 import java.nio.charset.StandardCharsets
 
 import org.apache.commons.io.IOUtils
+import org.ditw.rschr.OrcIdWorks.{Id2WorkIds, WorkInfo}
 import org.ditw.rschr.utils.{SparkUtils, TgzUtils}
 import org.joda.time.DateTime
 
@@ -487,6 +488,45 @@ object ReadJsonTests extends App {
     }
   }
 
+  private def fileHandlerExtractWorks(fn:String, is:InputStream):List[String] = {
+    val s = IOUtils.toString(is, StandardCharsets.UTF_8)
+    try {
+      val (n, json, prf) = extractOneRecord(fn, s)
+      if (prf.profile.hasActivities) {
+        val id = prf.profile.orcid_identifier.path
+        val activities = prf.profile.activities
+        if (activities.hasWorks) {
+          val eidMap = activities.works.work.flatMap { w =>
+            val title = if (w.work_title != null) w.work_title.toString else "[NoTitle]"
+            if (w.hasExtIds)
+              Option(WorkInfo(title, w.work_ext_ids.getExtIdMap))
+            else None
+          }
+          val id2works = Id2WorkIds(id, prf.profile.name, eidMap)
+          println(OrcIdWorks.expWorkIds2Json(id2works.toExpWorkIds))
+        }
+      }
+      List()
+    }
+    catch {
+      case t:Throwable => {
+        try {
+          val deprecated = readDepRecJson(s)
+          val tmp = s"deprecated profile: $fn"
+          println(tmp)
+          List(tmp)
+        }
+        catch {
+          case t1:Throwable => {
+            println(s"failed to process [$fn]")
+            throw t
+          }
+        }
+
+      }
+    }
+  }
+
   val rootFolder = "/media/sf_work/orcid_2015" //"/media/sf_work/orcid_2016"
   val p = "/media/sf_vmshare/ORCID_public_data_file_2015.tar.gz"
   // "/media/sf_vmshare/ORCID_public_data_file_2016.tar.gz"
@@ -495,11 +535,12 @@ object ReadJsonTests extends App {
   val allSummaries = TgzUtils.processTgz(
     p,
     s => s.endsWith(".json"),
-    fileHandlerBatchSave
+    fileHandlerExtractWorks
+    //fileHandlerBatchSave
     //fileHandler
   )
 
-  _batchInfo.saveAllRem()
+  //_batchInfo.saveAllRem()
 
   spark.stop()
 
