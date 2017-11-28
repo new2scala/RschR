@@ -493,8 +493,22 @@ object OrcidProfile_2015 extends Serializable {
   case class WorkExtIds(ext_ids:Array[WorkExtId], scope:String) {
     def hasExtIds:Boolean = ext_ids != null && ext_ids.length > 0
     def getExtIdMap:Map[String, String] =
-      if (hasExtIds) ext_ids.map(eid => eid.id_type.trim.toLowerCase -> eid.id_value.value.trim).toMap
+    try {
+      if (hasExtIds)
+        ext_ids.flatMap { eid =>
+          if (eid.id_type == null || eid.id_value == null || eid.id_value.value == null)
+            None
+          else
+            Option(eid.id_type.trim.toLowerCase -> eid.id_value.value.trim)
+        }.toMap
       else EmptyMap
+    }
+    catch {
+      case t:Throwable => {
+        println(t.getMessage)
+        throw t
+      }
+    }
   }
 
   object Renames_WorkExtIds extends Serializable {

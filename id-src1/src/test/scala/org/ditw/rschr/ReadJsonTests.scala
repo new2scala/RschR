@@ -488,6 +488,22 @@ object ReadJsonTests extends App {
     }
   }
 
+  private var Lines = ListBuffer[String]()
+  private var currIndex = 1
+  private def checkAndSaveCurrLines(outPath:String):Unit = {
+    if (Lines.size > 20000 || Lines.map(_.length).sum > 2000000) {
+      val folder = new File(outPath)
+      if (!folder.exists()) folder.mkdirs()
+
+      val path = f"$outPath/exp_works_$currIndex%05d"
+      val fo = new FileOutputStream(path)
+      IOUtils.write(Lines.mkString("\n"), fo, StandardCharsets.UTF_8)
+      fo.close()
+      println(s"$path saved.")
+      Lines = ListBuffer[String]()
+      currIndex = currIndex+1
+    }
+  }
   private def fileHandlerExtractWorks(fn:String, is:InputStream):List[String] = {
     val s = IOUtils.toString(is, StandardCharsets.UTF_8)
     try {
@@ -503,7 +519,9 @@ object ReadJsonTests extends App {
             else None
           }
           val id2works = Id2WorkIds(id, prf.profile.name, eidMap)
-          println(OrcIdWorks.expWorkIds2Json(id2works.toExpWorkIds))
+          Lines += OrcIdWorks.expWorkIds2Json(id2works.toExpWorkIds)
+
+          checkAndSaveCurrLines(savePath)
         }
       }
       List()
@@ -519,7 +537,9 @@ object ReadJsonTests extends App {
         catch {
           case t1:Throwable => {
             println(s"failed to process [$fn]")
-            throw t
+            println(s)
+            List()
+            //throw t
           }
         }
 
@@ -528,10 +548,12 @@ object ReadJsonTests extends App {
   }
 
   val rootFolder = "/media/sf_work/orcid_2015" //"/media/sf_work/orcid_2016"
-  val p = "/media/sf_vmshare/ORCID_public_data_file_2015.tar.gz"
+  val p = "/media/sf_vmshare/public_profiles_2017.tar.gz"
   // "/media/sf_vmshare/ORCID_public_data_file_2016.tar.gz"
   // "/media/sf_vmshare/public_profiles_2017.tar.gz"
   //"/media/sf_vmshare/ORCID_public_data_file_2015.tar.gz"
+  val savePath = "/media/sf_work/orcid_2017_works"
+
   val allSummaries = TgzUtils.processTgz(
     p,
     s => s.endsWith(".json"),
@@ -539,6 +561,8 @@ object ReadJsonTests extends App {
     //fileHandlerBatchSave
     //fileHandler
   )
+
+  checkAndSaveCurrLines(savePath)
 
   //_batchInfo.saveAllRem()
 

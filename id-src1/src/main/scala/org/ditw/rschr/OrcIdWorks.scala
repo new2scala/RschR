@@ -15,11 +15,11 @@ object OrcIdWorks {
     def pii:Option[String] = eids.get("pii")
   }
 
+  case class WorkIds(t:String, v:Array[String])
   case class ExpWorkIds(id:String,
                        name:Option[String],
-                       pmids:Array[Long],
-                       dois:Array[String],
-                       pii:Array[String]
+                       wc:Int,
+                       wids:Array[WorkIds]
                        )
 
   case class Id2WorkIds(
@@ -42,7 +42,12 @@ object OrcIdWorks {
       s"[$n]($workCount) pmids($pmidCount): [$pmidTrace], dois($doiCount): [$doiTrace]"
     }
 
-    def toExpWorkIds:ExpWorkIds = ExpWorkIds(id, name, getPmids, getDois, getPiis)
+    def toExpWorkIds:ExpWorkIds = {
+      val wids = works.flatMap(_.eids.toList).groupBy(_._1.trim)
+        .map(p => WorkIds(p._1, p._2.map(_._2.trim)))
+        .toArray.sortBy(_.t)
+      ExpWorkIds(id, name, works.length, wids)
+    }
   }
 
   def expWorkIds2Json(ew:ExpWorkIds):String = {

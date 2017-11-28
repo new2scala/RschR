@@ -7,8 +7,11 @@ import javax.swing.JApplet
 
 import org.jgraph.JGraph
 import org.jgraph.graph.{AttributeMap, GraphConstants}
+import org.jgrapht.Graph
+import org.jgrapht.alg.CycleDetector
+import org.jgrapht.alg.clique.BronKerboschCliqueFinder
 import org.jgrapht.ext.JGraphModelAdapter
-import org.jgrapht.graph.{DefaultEdge, DefaultListenableGraph, DirectedMultigraph}
+import org.jgrapht.graph.{DefaultEdge, DefaultListenableGraph, DirectedMultigraph, SimpleGraph}
 
 /**
   * Created by dev on 2017-11-28.
@@ -16,9 +19,12 @@ import org.jgrapht.graph.{DefaultEdge, DefaultListenableGraph, DirectedMultigrap
 class GraphApplet(conf:GraphConfig) extends JApplet {
   private var jgAdapter:JGraphModelAdapter[String, DefaultEdge] = null
 
+  import collection.JavaConverters._
   override def init(): Unit = {
     // create a JGraphT graph
-    val g = new DefaultListenableGraph[String, DefaultEdge](new DirectedMultigraph[String, DefaultEdge](classOf[DefaultEdge]))
+    val g = new DefaultListenableGraph[String, DefaultEdge](
+      new DirectedMultigraph[String, DefaultEdge](classOf[DefaultEdge])
+    )
 
     // create a visualization using JGraph, via an adapter
     jgAdapter = new JGraphModelAdapter[String, DefaultEdge](g)
@@ -31,6 +37,21 @@ class GraphApplet(conf:GraphConfig) extends JApplet {
 
     conf.initConf(g, this)
 
+    testAlgs(g)
+  }
+
+  private def testAlgs(g:Graph[String, DefaultEdge]):Unit = {
+    val clFinder = new BronKerboschCliqueFinder[String, DefaultEdge](g)
+
+    val it = clFinder.iterator()
+    while (it.hasNext) {
+      val cl = it.next()
+      println(cl.asScala.toList.mkString(","))
+    }
+
+    val cd = new CycleDetector[String, DefaultEdge](g)
+    val circles = cd.findCycles()
+    println(circles.size())
   }
 
   private def adjustDisplaySettings(jg: JGraph) = {
@@ -60,6 +81,6 @@ class GraphApplet(conf:GraphConfig) extends JApplet {
   }
 
   private val DEFAULT_BG_COLOR = Color.decode("#FAFBFF")
-  private val DEFAULT_SIZE = new Dimension(530, 320)
+  private val DEFAULT_SIZE = new Dimension(800, 600)
 
 }
