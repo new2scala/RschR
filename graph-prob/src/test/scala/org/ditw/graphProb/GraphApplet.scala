@@ -5,6 +5,7 @@ import java.awt.geom.Rectangle2D
 import java.util
 import javax.swing.JApplet
 
+import org.ditw.graphProb.belUpdating.GraphHelpers._
 import org.jgraph.JGraph
 import org.jgraph.graph.{AttributeMap, GraphConstants}
 import org.jgrapht.Graph
@@ -16,15 +17,16 @@ import org.jgrapht.graph.{DefaultEdge, DefaultListenableGraph, DirectedMultigrap
 /**
   * Created by dev on 2017-11-28.
   */
-class GraphApplet(conf:GraphConfig) extends JApplet {
+class GraphApplet(model:ProbModel) extends JApplet {
   private var jgAdapter:JGraphModelAdapter[String, DefaultEdge] = null
 
   import collection.JavaConverters._
   override def init(): Unit = {
     // create a JGraphT graph
-    val g = new DefaultListenableGraph[String, DefaultEdge](
-      new DirectedMultigraph[String, DefaultEdge](classOf[DefaultEdge])
-    )
+//    val g = new DefaultListenableGraph[String, DefaultEdge](
+//      new DirectedMultigraph[String, DefaultEdge](classOf[DefaultEdge])
+//    )
+    val g:Graph[String, DefaultEdge] = graphFromModel(model)
 
     // create a visualization using JGraph, via an adapter
     jgAdapter = new JGraphModelAdapter[String, DefaultEdge](g)
@@ -33,11 +35,24 @@ class GraphApplet(conf:GraphConfig) extends JApplet {
 
     adjustDisplaySettings(jgraph)
     getContentPane.add(jgraph)
-    resize(DEFAULT_SIZE)
+    resize(DEFAULT_DIM)
 
-    conf.initConf(g, this)
+    initConf(g, DEFAULT_SIZE)
 
-    testAlgs(g)
+    //testAlgs(g)
+  }
+
+  def initConf(g:Graph[String,DefaultEdge], canvasSize:Int):Unit = {
+
+    val vtxCount = g.vertexSet().size()
+
+    val coords = GraphLayoutHelpers.calcCoords(vtxCount, canvasSize)
+
+    // position vertices nicely within JGraph component
+    val sortedVertice = g.vertexSet().asScala.toArray.sorted
+    sortedVertice.indices.foreach(idx =>
+      positionVertexAt(sortedVertice(idx), coords(idx)._1, coords(idx)._2)
+    )
   }
 
   private def testAlgs(g:Graph[String, DefaultEdge]):Unit = {
@@ -55,7 +70,7 @@ class GraphApplet(conf:GraphConfig) extends JApplet {
   }
 
   private def adjustDisplaySettings(jg: JGraph) = {
-    jg.setPreferredSize(DEFAULT_SIZE)
+    jg.setPreferredSize(DEFAULT_DIM)
     var c = DEFAULT_BG_COLOR
     var colorStr:String = null
     try
@@ -81,6 +96,7 @@ class GraphApplet(conf:GraphConfig) extends JApplet {
   }
 
   private val DEFAULT_BG_COLOR = Color.decode("#FAFBFF")
-  private val DEFAULT_SIZE = new Dimension(800, 600)
+  private val DEFAULT_SIZE = 800
+  private val DEFAULT_DIM = new Dimension(DEFAULT_SIZE, DEFAULT_SIZE)
 
 }

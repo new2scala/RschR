@@ -537,7 +537,7 @@ object ReadJsonTests extends App {
         catch {
           case t1:Throwable => {
             println(s"failed to process [$fn]")
-            println(s)
+//            println(s)
             List()
             //throw t
           }

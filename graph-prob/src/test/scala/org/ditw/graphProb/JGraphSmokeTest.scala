@@ -3,6 +3,7 @@ package org.ditw.graphProb
 import java.awt.{Color, Dimension}
 import javax.swing.JFrame
 
+import org.ditw.graphProb.belUpdating.GraphHelpers._
 import org.jgraph.JGraph
 import org.jgrapht.ListenableGraph
 import org.jgrapht.ext.JGraphModelAdapter
@@ -39,27 +40,19 @@ object JGraphSmokeTest extends App {
 //    )
 //  )
 
-  val conf = new GraphConfig(
+  val dummy:AnyRef = null
+
+  val model = ProbModel(
     List(
-      ("v1", 300, 10),
-      ("v2", 200, 200),
-      ("v3", 400, 200),
-      ("v4", 100, 400),
-      ("v5", 300, 400),
-      ("v6", 500, 400)
-    ),
-    List(
-      ("v1", "v2"),
-      ("v1", "v3"),
-      ("v2", "v3"),
-      ("v2", "v4"),
-      ("v2", "v5"),
-      ("v3", "v5"),
-      ("v3", "v6")
+      Potential(Set("F1", "F2"), dummy),
+      Potential(Set("F1", "F3"), dummy),
+      Potential(Set("F2", "F4"), dummy),
+      Potential(Set("F2", "F3", "F5"), dummy),
+      Potential(Set("F3", "F6"), dummy)
     )
   )
 
-  val app = new GraphApplet(conf)
+  val app = new GraphApplet(model)
   app.init()
 
   val frame = new JFrame
