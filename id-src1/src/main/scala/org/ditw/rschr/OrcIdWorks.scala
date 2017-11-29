@@ -55,4 +55,10 @@ object OrcIdWorks {
     implicit val fmt = DefaultFormats
     write(ew)
   }
+
+  def expWorkIdsFromJson(j:String):ExpWorkIds = {
+    import org.json4s.jackson.JsonMethods._
+    implicit val fmt = DefaultFormats
+    parse(j).extract[ExpWorkIds]
+  }
 }
