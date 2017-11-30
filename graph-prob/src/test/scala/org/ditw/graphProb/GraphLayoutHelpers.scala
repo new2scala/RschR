@@ -28,7 +28,7 @@ object GraphLayoutHelpers extends App {
     val (steps, coords) = _calcCoords(vertexCount)
 
     val span = canvasSize/(steps+1)
-    coords.map(p => (p._1+1)*span -> (p._2+1)*span)
+    coords.map(p => (p._2+1)*span -> (p._1+1)*span)
   }
 
   var t = calcCoords(5, 600)

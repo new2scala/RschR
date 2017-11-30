@@ -3,6 +3,8 @@ package org.ditw.graphProb.belUpdating
 import org.jgrapht.Graph
 import org.jgrapht.graph.{DefaultEdge, SimpleGraph}
 
+import scala.reflect.ClassTag
+import scala.reflect._
 /**
   * Created by dev on 2017-11-29.
   */
@@ -13,7 +15,7 @@ object GraphHelpers {
 
   case class ProbModel(potentials:List[Potential], desc:String = "")
 
-  def graphFromModel(model:ProbModel):Graph[String, DefaultEdge] = {
+  def graphFromModel[T <: DefaultEdge : ClassTag](model:ProbModel):Graph[String, T] = {
     val vertexIds = model.potentials.flatMap(_.factorIds)
 
     val edges = model.potentials.flatMap { p =>
@@ -22,7 +24,7 @@ object GraphHelpers {
       pairs
     }
 
-    val g = new SimpleGraph[String, DefaultEdge](classOf[DefaultEdge])
+    val g = new SimpleGraph[String, T](classTag[T].runtimeClass.asInstanceOf[Class[T]])
     vertexIds.foreach(g.addVertex)
 
     edges.foreach(p => g.addEdge(p._1, p._2))

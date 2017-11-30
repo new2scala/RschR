@@ -48,7 +48,12 @@ object JGraphSmokeTest extends App {
       Potential(Set("F1", "F3"), dummy),
       Potential(Set("F2", "F4"), dummy),
       Potential(Set("F2", "F3", "F5"), dummy),
-      Potential(Set("F3", "F6"), dummy)
+      Potential(Set("F3", "F6"), dummy),
+      Potential(Set("F5", "F6", "F7"), dummy),
+      Potential(Set("F7", "F8"), dummy),
+      Potential(Set("F8", "F9"), dummy),
+      Potential(Set("F8", "Fa"), dummy),
+      Potential(Set("F9", "Fb"), dummy)
     )
   )
 
