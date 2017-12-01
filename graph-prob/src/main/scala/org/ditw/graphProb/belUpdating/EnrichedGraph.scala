@@ -25,5 +25,7 @@ class EnrichedGraph[E <: VertexEdge](private val _g:Graph[String, E]) {
   def vertices:Set[String] = _vertices
 
   def neighbors(vtx:String):Set[String] = _nbMap(vtx)
+
+  def family(vtx:String):Set[String] = neighbors(vtx)+vtx
 }
 
