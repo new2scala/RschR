@@ -1,6 +1,7 @@
 package org.ditw.graphProb
 
 import org.ditw.graphProb.JGraphSmokeTest.dummy
+import org.ditw.graphProb.belUpdating.EnrichedGraph
 import org.ditw.graphProb.belUpdating.GraphHelpers.{Potential, ProbModel}
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{FlatSpec, Matchers}
@@ -53,7 +54,8 @@ class TriangulatedGraphHelpersTest extends FlatSpec with Matchers with TableDriv
   "test" should "pass" in {
     forAll(testData) { (model, snodes) =>
       val g = graphFromModel[VertexEdge](model)
-      val found = findSimplicialNodes(g)
+      val eg = new EnrichedGraph(g)
+      val found = findSimplicialNodes(eg)
       found shouldBe snodes
     }
   }

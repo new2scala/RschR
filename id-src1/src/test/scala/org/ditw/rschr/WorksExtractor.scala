@@ -37,12 +37,12 @@ object WorksExtractor extends App {
 
   val spark = SparkUtils.sparkContextLocal()
 
-  var r = extractWorks("pmid", dataPaths(0))
+  var r = extractWorks("doi", dataPaths(0))
 
   val experts = r.count()
   println(experts)
 
-  r.coalesce(64).sortBy(_._1.toLowerCase).saveAsTextFile("/media/sf_work/orcid_2017_trace")
+  r.coalesce(64).sortBy(_._1.toLowerCase).saveAsTextFile("/media/sf_work/orcid_2017_doi")
 
   spark.stop()
 }
