@@ -85,6 +85,42 @@ class EnrichedGraphTest extends FlatSpec with Matchers with TableDrivenPropertyC
           "A2" -> "A3"
         )
       )
+    ),
+    (
+      buildGraph(
+        "A1" -> "A2",
+        "A1" -> "A3",
+        "A1" -> "A4",
+        "A2" -> "A3",
+        "A2" -> "A5",
+        "A3" -> "A4",
+        "A3" -> "A5",
+        "A4" -> "A5"
+      ),
+      None
+    ),
+    (
+      buildGraph(
+        "A1" -> "A2",
+        "A1" -> "A3",
+        "A1" -> "A4",
+        "A2" -> "A3",
+        "A2" -> "A4", // connect A2 - A4 to make it triangulated
+        "A2" -> "A5",
+        "A3" -> "A4",
+        "A3" -> "A5",
+        "A4" -> "A5"
+      ),
+      Option(
+        buildGraph(
+          "A2" -> "A3",
+          "A2" -> "A4",
+          "A2" -> "A5",
+          "A3" -> "A4",
+          "A3" -> "A5",
+          "A4" -> "A5"
+        )
+      )
     )
   )
 
@@ -95,9 +131,12 @@ class EnrichedGraphTest extends FlatSpec with Matchers with TableDrivenPropertyC
       if (exp.nonEmpty) {
         res.nonEmpty shouldBe true
         val e = exp.get
-        val r = res.get
+        val r = res.get._2
 
         graphsEqual(e, r) shouldBe true
+      }
+      else {
+        res.nonEmpty shouldBe false
       }
 
     }

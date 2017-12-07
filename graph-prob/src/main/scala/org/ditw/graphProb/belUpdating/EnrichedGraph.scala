@@ -50,17 +50,17 @@ class EnrichedGraph[E <: VertexEdge : ClassTag](private val _g:SimpleGraph[Strin
     new EnrichedGraph(g)
   }
 
-  def removeVertex(vtx:String):Boolean = _g.removeVertex(vtx)
+  //def removeVertex(vtx:String):Boolean = _g.removeVertex(vtx)
 
-  private[graphProb] def _eliminateOne:Option[EnrichedGraph[E]] = {
+  private[graphProb] def _eliminateOne:Option[(String, EnrichedGraph[E])] = {
     val itVtxs = _vertices.toList.sorted.iterator
-    var r:Option[EnrichedGraph[E]] = None
+    var r:Option[(String, EnrichedGraph[E])] = None
     while (r.isEmpty && itVtxs.hasNext) {
       val vtx = itVtxs.next()
       if (testSimplicial(vtx)) {
         val g1 = cloneSimpleGraph(_g)
         g1.removeVertex(vtx)
-        r = Option(new EnrichedGraph(g1))
+        r = Option(vtx, new EnrichedGraph(g1))
       }
     }
     r
