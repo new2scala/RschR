@@ -13,21 +13,16 @@ object TriangulatedGraphHelpers {
 
   class VertexEdge extends DefaultEdge {
     def vertices:Array[String] = Array(getSource.toString, getTarget.toString)
+
+//    override def hashCode(): Int = vertices(0).hashCode + vertices(1).hashCode
+//
+//    override def equals(obj: scala.Any): Boolean = obj match {
+//      case v:VertexEdge => vertices.sameElements(v.vertices)
+//      case _ => false
+//    }
   }
 
 
-  def findSimplicialNodes(g:EnrichedGraph[VertexEdge]):Set[String] = {
 
-    val r = ListBuffer[String]()
-    g.vertices.foreach { vtx =>
-      val ns = g.neighbors(vtx)
-      val t = ns.forall { e =>
-        val nst = ns -- Set(e)
-        nst.subsetOf(g.neighbors(e))
-      }
-      if (t) r += vtx
-    }
-    r.toSet
-  }
 
 }

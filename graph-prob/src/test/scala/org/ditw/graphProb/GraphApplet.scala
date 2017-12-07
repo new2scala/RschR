@@ -6,6 +6,7 @@ import java.util
 import javax.swing.JApplet
 
 import org.ditw.graphProb.belUpdating.GraphHelpers._
+import org.ditw.graphProb.belUpdating.TriangulatedGraphHelpers.VertexEdge
 import org.jgraph.JGraph
 import org.jgraph.graph.{AttributeMap, GraphConstants}
 import org.jgrapht.Graph
@@ -13,12 +14,13 @@ import org.jgrapht.alg.CycleDetector
 import org.jgrapht.alg.clique.BronKerboschCliqueFinder
 import org.jgrapht.ext.JGraphModelAdapter
 import org.jgrapht.graph.{DefaultEdge, DefaultListenableGraph, DirectedMultigraph, SimpleGraph}
+import sun.security.provider.certpath.Vertex
 
 /**
   * Created by dev on 2017-11-28.
   */
 class GraphApplet(model:ProbModel) extends JApplet {
-  private var jgAdapter:JGraphModelAdapter[String, DefaultEdge] = null
+  private var jgAdapter:JGraphModelAdapter[String, VertexEdge] = null
 
   import collection.JavaConverters._
   override def init(): Unit = {
@@ -26,10 +28,10 @@ class GraphApplet(model:ProbModel) extends JApplet {
 //    val g = new DefaultListenableGraph[String, DefaultEdge](
 //      new DirectedMultigraph[String, DefaultEdge](classOf[DefaultEdge])
 //    )
-    val g:Graph[String, DefaultEdge] = graphFromModel(model)
+    val g:Graph[String, VertexEdge] = graphFromModel(model)
 
     // create a visualization using JGraph, via an adapter
-    jgAdapter = new JGraphModelAdapter[String, DefaultEdge](g)
+    jgAdapter = new JGraphModelAdapter[String, VertexEdge](g)
 
     val jgraph = new JGraph(jgAdapter)
 
@@ -42,7 +44,7 @@ class GraphApplet(model:ProbModel) extends JApplet {
     //testAlgs(g)
   }
 
-  def initConf(g:Graph[String,DefaultEdge], canvasSize:Int):Unit = {
+  def initConf(g:Graph[String,VertexEdge], canvasSize:Int):Unit = {
 
     val vtxCount = g.vertexSet().size()
 
@@ -55,8 +57,8 @@ class GraphApplet(model:ProbModel) extends JApplet {
     )
   }
 
-  private def testAlgs(g:Graph[String, DefaultEdge]):Unit = {
-    val clFinder = new BronKerboschCliqueFinder[String, DefaultEdge](g)
+  private def testAlgs(g:Graph[String, VertexEdge]):Unit = {
+    val clFinder = new BronKerboschCliqueFinder[String, VertexEdge](g)
 
     val it = clFinder.iterator()
     while (it.hasNext) {
@@ -64,7 +66,7 @@ class GraphApplet(model:ProbModel) extends JApplet {
       println(cl.asScala.toList.mkString(","))
     }
 
-    val cd = new CycleDetector[String, DefaultEdge](g)
+    val cd = new CycleDetector[String, VertexEdge](g)
     val circles = cd.findCycles()
     println(circles.size())
   }

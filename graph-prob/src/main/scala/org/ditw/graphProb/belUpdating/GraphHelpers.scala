@@ -1,10 +1,10 @@
 package org.ditw.graphProb.belUpdating
 
+import org.ditw.graphProb.belUpdating.TriangulatedGraphHelpers.VertexEdge
 import org.jgrapht.Graph
 import org.jgrapht.graph.{DefaultEdge, SimpleGraph}
 
-import scala.reflect.ClassTag
-import scala.reflect._
+import scala.reflect.{ClassTag, classTag, _}
 /**
   * Created by dev on 2017-11-29.
   */
@@ -15,7 +15,17 @@ object GraphHelpers {
 
   case class ProbModel(potentials:List[Potential], desc:String = "")
 
-  def graphFromModel[T <: DefaultEdge : ClassTag](model:ProbModel):Graph[String, T] = {
+  def createSimpleGraph[T <: VertexEdge : ClassTag]:SimpleGraph[String, T] =
+    new SimpleGraph[String, T](classTag[T].runtimeClass.asInstanceOf[Class[T]])
+  import collection.JavaConverters._
+  def cloneSimpleGraph[T <: VertexEdge : ClassTag](g:SimpleGraph[String, T]):SimpleGraph[String, T] = {
+    val newg = createSimpleGraph[T]
+    g.vertexSet().asScala.foreach(newg.addVertex)
+    g.edgeSet().asScala.foreach(ed => newg.addEdge(ed.vertices(0), ed.vertices(1)))
+    newg
+  }
+
+  def graphFromModel[T <: VertexEdge : ClassTag](model:ProbModel):SimpleGraph[String, T] = {
     val vertexIds = model.potentials.flatMap(_.factorIds)
 
     val edges = model.potentials.flatMap { p =>
@@ -24,7 +34,7 @@ object GraphHelpers {
       pairs
     }
 
-    val g = new SimpleGraph[String, T](classTag[T].runtimeClass.asInstanceOf[Class[T]])
+    val g = createSimpleGraph[T]
     vertexIds.foreach(g.addVertex)
 
     edges.foreach(p => g.addEdge(p._1, p._2))
