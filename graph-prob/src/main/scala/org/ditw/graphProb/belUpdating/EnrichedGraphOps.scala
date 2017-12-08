@@ -57,18 +57,42 @@ object EnrichedGraphOps {
       res.toSet
     }
 
-    def genJoinTree:List[(Set[String], Set[String])] = {
+    private[graphProb] def prepareJoinTree:IndexedSeq[(Set[String], Set[String])] = {
       var res = ListBuffer[(Set[String], Set[String])]()
       var next = _eg.firstSimplicialNode
       var eg = _eg
       while (next.nonEmpty) {
         val vtx = next.get
         val (cl, removed, g1) = removeSimplicialNodesFromClique(vtx, eg)
-        res += cl -> removed
+        res += cl -> (cl -- removed)
         eg = g1
         next = eg.firstSimplicialNode
       }
-      res.toList
+      res.toIndexedSeq
+    }
+
+    private[graphProb] def _genJoinTree:(IndexedSeq[(Set[String], Set[String])], List[(Int, Int)]) = {
+      val l = prepareJoinTree
+
+      val links = ListBuffer[(Int, Int)]()
+      l.indices.foreach { idx =>
+        var start = idx+1
+        var found = false
+        val (cli, si) = l(idx)
+        while (!found && start < l.size) {
+          val (cl, s) = l(start)
+          if (si.subsetOf(cl)) {
+            val c = si -- s
+            if (c.nonEmpty) {
+              found = true
+              links += idx -> start
+            }
+          }
+          start = start + 1
+        }
+      }
+
+      l -> links.toList
     }
   }
 

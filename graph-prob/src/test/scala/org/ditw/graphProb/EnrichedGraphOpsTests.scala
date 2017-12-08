@@ -208,7 +208,7 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
   }
 
   private val genJoinTreeTestData = Table(
-    ("enrichedGraph", "nodeSetPairs"),
+    ("enrichedGraph", "nodeSetPairs", "links"),
     (
       buildGraph(
         "A" -> "B",
@@ -234,20 +234,28 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
         "G" -> "J",
         "H" -> "J"
       ),
+      IndexedSeq(
+        Set("A", "B", "C", "D") -> Set("B", "C", "D"),
+        Set("D", "E", "F", "I") -> Set("D", "E"),
+        Set("B", "C", "D", "E") -> Set("B", "C", "D"),
+        Set("B", "C", "D", "G") -> Set("C", "G"),
+        Set("C", "G", "H", "J") -> Set()
+      ),
       List(
-        Set("A", "B", "C", "D") -> Set("A"),
-        Set("D", "E", "F", "I") -> Set("F", "I"),
-        Set("B", "C", "D", "E") -> Set("E"),
-        Set("B", "C", "D", "G") -> Set("B", "D"),
-        Set("C", "G", "H", "J") -> Set("C", "G", "H", "J")
+        0 -> 3,
+        1 -> 2,
+        2 -> 3,
+        3 -> 4
       )
     )
   )
 
   "genJoinTree tests" should "pass" in {
-    forAll(genJoinTreeTestData) { (eg, pairs) =>
-      val p = eg.genJoinTree
+    forAll(genJoinTreeTestData) { (eg, pairs, links) =>
+      val (p, l) = eg._genJoinTree
+      //val p1 = p.map(p => p._1 -> (p._1 -- p._2))
       p shouldBe pairs
+      l shouldBe links
     }
   }
 }
