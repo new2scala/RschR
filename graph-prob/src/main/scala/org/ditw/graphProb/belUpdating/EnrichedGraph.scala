@@ -12,7 +12,7 @@ import scala.reflect.{ClassTag, classTag}
   * Created by dev on 2017-12-01.
   */
 import collection.JavaConverters._
-class EnrichedGraph[E <: VertexEdge : ClassTag](private val _g:SimpleGraph[String, E]) {
+class EnrichedGraph[E <: VertexEdge : ClassTag](private[graphProb] val _g:SimpleGraph[String, E]) {
   private val _nbMap:Map[String,Set[String]] = {
     _g.vertexSet().asScala.map { vtx =>
       val edges = _g.edgesOf(vtx)
@@ -35,7 +35,7 @@ class EnrichedGraph[E <: VertexEdge : ClassTag](private val _g:SimpleGraph[Strin
 
   def family(vtx:String):Set[String] = neighbors(vtx)+vtx
 
-  private def testSimplicial(vtx:String):Boolean = {
+  private[graphProb] def testSimplicial(vtx:String):Boolean = {
     val ns = neighbors(vtx)
     ns.forall { e =>
       val nst = ns -- Set(e)
@@ -43,7 +43,11 @@ class EnrichedGraph[E <: VertexEdge : ClassTag](private val _g:SimpleGraph[Strin
     }
   }
 
+  // Nodes with a complete neighbor set are called simplicial nodes
+  //  A set of nodes is complete if all nodes are pairwise linked.
   def simplicialNodes:Set[String] = vertices.filter(testSimplicial)
+
+  def firstSimplicialNode:Option[String] = vertices.toList.sorted.find(testSimplicial)
 
   def cloneGraph:EnrichedGraph[E] = {
     val g = cloneSimpleGraph(_g)

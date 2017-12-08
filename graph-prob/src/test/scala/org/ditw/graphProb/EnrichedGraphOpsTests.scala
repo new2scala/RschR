@@ -163,8 +163,7 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
         Set("A1", "A2", "A3", "A4"),
         Set("A2", "A3", "A4", "A5", "A6")
       )
-    )
-    ,
+    ),
     (
       buildGraph(
         "A" -> "B",
@@ -205,6 +204,50 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
     forAll(findCliqueTestData) { (eg, cl) =>
       val c = eg.findCliques
       c shouldBe cl
+    }
+  }
+
+  private val genJoinTreeTestData = Table(
+    ("enrichedGraph", "nodeSetPairs"),
+    (
+      buildGraph(
+        "A" -> "B",
+        "A" -> "C",
+        "A" -> "D",
+        "B" -> "C",
+        "B" -> "D",
+        "B" -> "E",
+        "B" -> "G",
+        "C" -> "D",
+        "C" -> "E",
+        "C" -> "G",
+        "C" -> "H",
+        "C" -> "J",
+        "D" -> "E",
+        "D" -> "F",
+        "D" -> "G",
+        "D" -> "I",
+        "E" -> "F",
+        "E" -> "I",
+        "F" -> "I",
+        "G" -> "H",
+        "G" -> "J",
+        "H" -> "J"
+      ),
+      List(
+        Set("A", "B", "C", "D") -> Set("A"),
+        Set("D", "E", "F", "I") -> Set("F", "I"),
+        Set("B", "C", "D", "E") -> Set("E"),
+        Set("B", "C", "D", "G") -> Set("B", "D"),
+        Set("C", "G", "H", "J") -> Set("C", "G", "H", "J")
+      )
+    )
+  )
+
+  "genJoinTree tests" should "pass" in {
+    forAll(genJoinTreeTestData) { (eg, pairs) =>
+      val p = eg.genJoinTree
+      p shouldBe pairs
     }
   }
 }

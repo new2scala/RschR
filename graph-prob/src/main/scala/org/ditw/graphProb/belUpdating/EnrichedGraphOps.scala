@@ -3,6 +3,7 @@ package org.ditw.graphProb.belUpdating
 import org.ditw.graphProb.belUpdating.TriangulatedGraphHelpers.VertexEdge
 
 import scala.collection.mutable.ListBuffer
+import scala.reflect.ClassTag
 
 /**
   * Created by dev on 2017-12-07.
@@ -32,7 +33,17 @@ object EnrichedGraphOps {
     res
   }
 
-  class EnrichedGraphOps[E <: VertexEdge](private val _eg:EnrichedGraph[E]) {
+  private[graphProb] def removeSimplicialNodesFromClique[E <: VertexEdge : ClassTag](simplicialVtx:String, eg:EnrichedGraph[E])
+    :(Set[String], Set[String], EnrichedGraph[E]) = {
+    val cl = eg.family(simplicialVtx)
+    val simpNodesInCl = cl.filter(eg.testSimplicial)
+    val g1 = GraphHelpers.cloneSimpleGraph(eg._g)
+    simpNodesInCl.foreach(g1.removeVertex)
+    val newg = new EnrichedGraph[E](g1)
+    (cl, simpNodesInCl, newg)
+  }
+
+  class EnrichedGraphOps[E <: VertexEdge : ClassTag](private val _eg:EnrichedGraph[E]) {
     def findCliques:Set[Set[String]] = {
       var res = ListBuffer[Set[String]]()
       var next = _eg._eliminateOne
@@ -45,8 +56,22 @@ object EnrichedGraphOps {
       }
       res.toSet
     }
+
+    def genJoinTree:List[(Set[String], Set[String])] = {
+      var res = ListBuffer[(Set[String], Set[String])]()
+      var next = _eg.firstSimplicialNode
+      var eg = _eg
+      while (next.nonEmpty) {
+        val vtx = next.get
+        val (cl, removed, g1) = removeSimplicialNodesFromClique(vtx, eg)
+        res += cl -> removed
+        eg = g1
+        next = eg.firstSimplicialNode
+      }
+      res.toList
+    }
   }
 
-  implicit def enrichedGraph2Ops[E <: VertexEdge](eg:EnrichedGraph[E]):EnrichedGraphOps[E] =
+  implicit def enrichedGraph2Ops[E <: VertexEdge : ClassTag](eg:EnrichedGraph[E]):EnrichedGraphOps[E] =
     new EnrichedGraphOps(eg)
 }
