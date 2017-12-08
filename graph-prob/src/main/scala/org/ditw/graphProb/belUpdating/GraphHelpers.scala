@@ -40,4 +40,15 @@ object GraphHelpers {
     edges.foreach(p => g.addEdge(p._1, p._2))
     g
   }
+
+  private[graphProb] def _buildGraph(edges:Seq[(String,String)]):EnrichedGraph[VertexEdge] = {
+    val vtxs = edges.flatMap(p => Set(p._1, p._2))
+    val g = new SimpleGraph[String, VertexEdge](classOf[VertexEdge])
+    vtxs.foreach(g.addVertex)
+    edges.foreach(p => g.addEdge(p._1, p._2))
+    val r = new EnrichedGraph[VertexEdge](g)
+    r
+  }
+
+  def buildGraph(edges:(String,String)*):EnrichedGraph[VertexEdge] = _buildGraph(edges)
 }

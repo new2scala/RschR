@@ -12,17 +12,7 @@ import org.scalatest.{FlatSpec, Matchers}
   */
 class EnrichedGraphTest extends FlatSpec with Matchers with TableDrivenPropertyChecks {
 
-  def _buildGraph(edges:Seq[(String,String)]):EnrichedGraph[VertexEdge] = {
-    val vtxs = edges.flatMap(p => Set(p._1, p._2))
-    val g = new SimpleGraph[String, VertexEdge](classOf[VertexEdge])
-    vtxs.foreach(g.addVertex)
-    edges.foreach(p => g.addEdge(p._1, p._2))
-    val r = new EnrichedGraph[VertexEdge](g)
-    r
-  }
-  def buildGraph(edges:(String,String)*):EnrichedGraph[VertexEdge] = {
-    _buildGraph(edges)
-  }
+  import org.ditw.graphProb.belUpdating.GraphHelpers._
 
   private val familyTestData = Table(
     ("g", "vtx", "nbr"),
@@ -77,7 +67,7 @@ class EnrichedGraphTest extends FlatSpec with Matchers with TableDrivenPropertyC
     (
       buildGraph(
         "A1" -> "A2",
-        "A1" -> "A2",
+        "A1" -> "A3",
         "A2" -> "A3"
       ),
       Option(

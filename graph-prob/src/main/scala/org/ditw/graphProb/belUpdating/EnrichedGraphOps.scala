@@ -41,9 +41,12 @@ object EnrichedGraphOps {
         val (vtx, g1) = next.get
         res = add2CliqueSet(res, eg.family(vtx))
         eg = g1
+        next = eg._eliminateOne
       }
       res.toSet
     }
   }
-  implicit def enrichedGraph2Ops[E <: VertexEdge](eg:EnrichedGraph[E]):EnrichedGraphOps[E] = new EnrichedGraphOps(eg)
+
+  implicit def enrichedGraph2Ops[E <: VertexEdge](eg:EnrichedGraph[E]):EnrichedGraphOps[E] =
+    new EnrichedGraphOps(eg)
 }
