@@ -247,6 +247,28 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
         2 -> 3,
         3 -> 4
       )
+    ),
+    (
+      buildGraph(
+        "A1" -> "A2",
+        "A1" -> "A3",
+        "A2" -> "A3",
+        "A2" -> "A4",
+        "A2" -> "A5",
+        "A3" -> "A5",
+        "A3" -> "A6"
+      ),
+      IndexedSeq(
+        Set("A1", "A2", "A3") -> Set("A2", "A3"),
+        Set("A2", "A4") -> Set("A2"),
+        Set("A2", "A3", "A5") -> Set("A3"),
+        Set("A3", "A6") -> Set()
+      ),
+      List(
+        0 -> 2,
+        1 -> 2,
+        2 -> 3
+      )
     )
   )
 
