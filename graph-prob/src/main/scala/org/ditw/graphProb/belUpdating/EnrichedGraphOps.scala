@@ -1,6 +1,7 @@
 package org.ditw.graphProb.belUpdating
 
 import org.ditw.graphProb.belUpdating.TriangulatedGraphHelpers.VertexEdge
+import org.jgrapht.graph.SimpleGraph
 
 import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
@@ -61,6 +62,45 @@ object EnrichedGraphOps {
     _toJoinTreeData(vertices, step, true)
   }
 
+  case class DecTree[NodeData, EdgeData](
+    private val _nodes:Iterable[GrafData[NodeData]],
+    private val _edges:Iterable[(String, String, GrafData[EdgeData])],
+    private val _graph:SimpleGraph[String, VertexEdge]
+  ) {
+    private val nodeMap = _nodes.map(n => n.id -> n).toMap
+    private val edgeMap = _edges.map(n => (n._1, n._2) -> n._3).toMap
+
+    private val edges =
+      _edges.map(p => if (p._1 > p._2) p._2 -> p._1 else p._1 -> p._2)
+
+    def allEdges:Iterable[(String, String)] = edges
+
+    def edgeData(edge:(String,String)):GrafData[EdgeData] = {
+      edgeMap(edge)
+    }
+    //private val edgeMap = _edges.map(n => n.id -> n).toMap
+  }
+
+  private def buildJoinTree[NodeData, EdgeData](
+    d:(IndexedSeq[(GrafData[NodeData], GrafData[EdgeData])], List[(Int, Int)])
+  ) :DecTree[NodeData, EdgeData] = {
+    val nodes = d._1.map(_._1)
+    //d._1.map(_._2)
+    val g = GraphHelpers.createSimpleGraph[VertexEdge]
+    nodes.foreach(n => g.addVertex(n.id))
+    val edges = d._2.map { p =>
+      val fromIdx = p._1
+      val toIdx = p._2
+      val fromNode = d._1(fromIdx)._1
+      val toNode = d._1(toIdx)._1
+      val edgeVtxs = List(fromNode.id, toNode.id).sorted
+      g.addEdge(edgeVtxs(0), edgeVtxs(1))
+      (edgeVtxs(0), edgeVtxs(1), d._1(fromIdx)._2)
+    }
+    DecTree(nodes, edges, g)
+  }
+
+
   class EnrichedGraphOps[E <: VertexEdge : ClassTag](private val _eg:EnrichedGraph[E]) {
     def findCliques:Set[Set[String]] = {
       var res = ListBuffer[Set[String]]()
@@ -116,6 +156,8 @@ object EnrichedGraphOps {
 
       l -> links.toList
     }
+
+    def joinTree:DecTree[Set[String], Set[String]] = buildJoinTree(_genJoinTree)
   }
 
   implicit def enrichedGraph2Ops[E <: VertexEdge : ClassTag](eg:EnrichedGraph[E]):EnrichedGraphOps[E] =

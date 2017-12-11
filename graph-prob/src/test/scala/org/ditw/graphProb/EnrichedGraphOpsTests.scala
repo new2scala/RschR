@@ -272,6 +272,8 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
     )
   )
 
+  import collection.JavaConverters._
+
   "genJoinTree tests" should "pass" in {
     forAll(genJoinTreeTestData) { (eg, pairs, links) =>
       val (p, l) = eg._genJoinTree
@@ -283,6 +285,13 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
         pp._2.data shouldBe ep._2
       }
       l shouldBe links
+
+      val jt = eg.joinTree
+      //println(jt)
+      jt.allEdges.foreach { edge =>
+        val ed = jt.edgeData(edge._1, edge._2)
+        ed shouldNot be(null)
+      }
     }
   }
 }
