@@ -1,5 +1,6 @@
 package org.ditw.graphProb.belUpdating
 
+import org.ditw.graphProb.belUpdating.GraphHelpers.{Potential, ProbModel}
 import org.ditw.graphProb.belUpdating.TriangulatedGraphHelpers.VertexEdge
 import org.jgrapht.graph.SimpleGraph
 
@@ -63,14 +64,14 @@ object EnrichedGraphOps {
   }
 
   case class DecTree[NodeData, EdgeData](
-    private val _nodes:Iterable[GrafData[NodeData]],
-    private val _edges:Iterable[(String, String, GrafData[EdgeData])],
-    private val _graph:SimpleGraph[String, VertexEdge]
+    private[EnrichedGraphOps] val _nodes:Iterable[GrafData[NodeData]],
+    private[EnrichedGraphOps] val _edges:Iterable[(String, String, GrafData[EdgeData])],
+    private[EnrichedGraphOps] val _graph:SimpleGraph[String, VertexEdge]
   ) {
-    private val nodeMap = _nodes.map(n => n.id -> n).toMap
-    private val edgeMap = _edges.map(n => (n._1, n._2) -> n._3).toMap
+    private[EnrichedGraphOps] val nodeMap = _nodes.map(n => n.id -> n).toMap
+    private[EnrichedGraphOps] val edgeMap = _edges.map(n => (n._1, n._2) -> n._3).toMap
 
-    private val edges =
+    private[EnrichedGraphOps] val edges =
       _edges.map(p => if (p._1 > p._2) p._2 -> p._1 else p._1 -> p._2)
 
     def allEdges:Iterable[(String, String)] = edges
@@ -100,6 +101,38 @@ object EnrichedGraphOps {
     DecTree(nodes, edges, g)
   }
 
+  case class JunctionTreeNodeData(nodeIds:Set[String], potentials:Set[Potential])
+
+  case class JunctionTreeEdgeData(edgeIds:Set[String], mailboxes:AnyRef)
+
+  import collection.mutable
+  def buildJunctionTree[NodeData, EdgeData](
+    probModel:ProbModel
+  ) :DecTree[JunctionTreeNodeData, JunctionTreeEdgeData] = {
+    val g:SimpleGraph[String, VertexEdge] = GraphHelpers.graphFromModel(probModel)
+    val eg = new EnrichedGraph(g)
+    val jt:DecTree[Set[String], Set[String]] = eg.joinTree
+
+    var nodeMap = mutable.Map[String, mutable.Set[Potential]]()
+    probModel.potentials.foreach { pot =>
+      val superSetNodes = jt._nodes.find(n => pot.factorIds.subsetOf(n.data))
+      if (superSetNodes.size != 1)
+        throw new IllegalArgumentException("Expect 1 superset!!")
+      val sn = superSetNodes.head
+      if (!nodeMap.contains(sn.id)) nodeMap += sn.id -> mutable.Set(pot)
+      else nodeMap(sn.id) += pot
+    }
+
+    val nodes:Iterable[GrafData[JunctionTreeNodeData]] = nodeMap.map(p =>
+      GrafData(p._1, JunctionTreeNodeData(jt.nodeMap(p._1).data, p._2.toSet), jt.nodeMap(p._1).desc)
+    )
+    val edges:Iterable[(String, String, GrafData[JunctionTreeEdgeData])] = jt.edgeMap.map { p =>
+      val eid = p._1
+      val ed = jt.edgeData(eid)
+      (eid._1, eid._2, GrafData(ed.id, JunctionTreeEdgeData(ed.data, null), ed.desc))
+    }
+    DecTree(nodes, edges, jt._graph)
+  }
 
   class EnrichedGraphOps[E <: VertexEdge : ClassTag](private val _eg:EnrichedGraph[E]) {
     def findCliques:Set[Set[String]] = {

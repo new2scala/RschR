@@ -1,5 +1,6 @@
 package org.ditw.graphProb
 
+import org.ditw.graphProb.JGraphSmokeTest.dummy
 import org.ditw.graphProb.belUpdating.EnrichedGraphOps
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{FlatSpec, Matchers}
@@ -294,4 +295,59 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
       }
     }
   }
+
+  private val junctionTreeTestData = Table(
+    ("model", "enrichedGraph", "nodeSetPairs", "links"),
+    (
+      ProbModel(
+        List(
+          Potential(Set("F1"), dummy),
+          Potential(Set("F1", "F2"), dummy),
+          Potential(Set("F1", "F3"), dummy),
+          Potential(Set("F2", "F4"), dummy),
+          Potential(Set("F2", "F3", "F5"), dummy),
+          Potential(Set("F3", "F6"), dummy)
+        )
+      ),
+      buildGraph(
+        "A1" -> "A2",
+        "A1" -> "A3",
+        "A2" -> "A3",
+        "A2" -> "A4",
+        "A2" -> "A5",
+        "A3" -> "A5",
+        "A3" -> "A6"
+      ),
+      IndexedSeq(
+        Set("A1", "A2", "A3") -> Set("A2", "A3"),
+        Set("A2", "A4") -> Set("A2"),
+        Set("A2", "A3", "A5") -> Set("A3"),
+        Set("A3", "A6") -> Set()
+      ),
+      List(
+        0 -> 2,
+        1 -> 2,
+        2 -> 3
+      )
+    )
+  )
+
+
+  "junctionTreeTest tests" should "pass" in {
+    forAll(junctionTreeTestData) { (model, eg, pairs, links) =>
+//      val (p, l) = eg._genJoinTree
+//
+//      val jt = eg.joinTree
+//      //println(jt)
+//      jt.allEdges.foreach { edge =>
+//        val ed = jt.edgeData(edge._1, edge._2)
+//        ed shouldNot be(null)
+//      }
+
+      val jut = buildJunctionTree(model)
+
+      println(jut)
+    }
+  }
+
 }
