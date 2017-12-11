@@ -276,7 +276,12 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
     forAll(genJoinTreeTestData) { (eg, pairs, links) =>
       val (p, l) = eg._genJoinTree
       //val p1 = p.map(p => p._1 -> (p._1 -- p._2))
-      p shouldBe pairs
+      p.indices.foreach { idx =>
+        val pp = p(idx)
+        val ep = pairs(idx)
+        pp._1.data shouldBe ep._1
+        pp._2.data shouldBe ep._2
+      }
       l shouldBe links
     }
   }

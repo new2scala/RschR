@@ -43,6 +43,24 @@ object EnrichedGraphOps {
     (cl, simpNodesInCl, newg)
   }
 
+  case class GrafData[T](id:String, data:T, desc:String)
+
+  private[EnrichedGraphOps] def _toJoinTreeData(vertices:Set[String], step:Int, isSeparator:Boolean):GrafData[Set[String]] = {
+    val d = vertices.toList.sorted
+    val id = if (!isSeparator) s"V$step" else s"S$step"
+    val desc = d.mkString("-")
+    GrafData(id, vertices, desc)
+  }
+
+  type JoinTreeNodeData = GrafData[Set[String]]
+  type JoinTreeEdgeData = GrafData[Set[String]]
+  private[EnrichedGraphOps] def toJoinTreeNode(vertices:Set[String], step:Int):JoinTreeNodeData = {
+    _toJoinTreeData(vertices, step, false)
+  }
+  private[EnrichedGraphOps] def toJoinTreeEdge(vertices:Set[String], step:Int):JoinTreeEdgeData = {
+    _toJoinTreeData(vertices, step, true)
+  }
+
   class EnrichedGraphOps[E <: VertexEdge : ClassTag](private val _eg:EnrichedGraph[E]) {
     def findCliques:Set[Set[String]] = {
       var res = ListBuffer[Set[String]]()
@@ -57,21 +75,25 @@ object EnrichedGraphOps {
       res.toSet
     }
 
-    private[graphProb] def prepareJoinTree:IndexedSeq[(Set[String], Set[String])] = {
-      var res = ListBuffer[(Set[String], Set[String])]()
+    private[graphProb] def prepareJoinTree:IndexedSeq[(JoinTreeNodeData, JoinTreeEdgeData)] = {
+      var res = ListBuffer[(JoinTreeNodeData, JoinTreeEdgeData)]()
       var next = _eg.firstSimplicialNode
       var eg = _eg
+      var step = 1
       while (next.nonEmpty) {
         val vtx = next.get
         val (cl, removed, g1) = removeSimplicialNodesFromClique(vtx, eg)
-        res += cl -> (cl -- removed)
+        val nd = toJoinTreeNode(cl, step)
+        val ed = toJoinTreeEdge(cl -- removed, step)
+        res += nd -> ed
         eg = g1
         next = eg.firstSimplicialNode
+        step = step + removed.size
       }
       res.toIndexedSeq
     }
 
-    private[graphProb] def _genJoinTree:(IndexedSeq[(Set[String], Set[String])], List[(Int, Int)]) = {
+    private[graphProb] def _genJoinTree:(IndexedSeq[(JoinTreeNodeData, JoinTreeEdgeData)], List[(Int, Int)]) = {
       val l = prepareJoinTree
 
       val links = ListBuffer[(Int, Int)]()
@@ -81,8 +103,8 @@ object EnrichedGraphOps {
         val (cli, si) = l(idx)
         while (!found && start < l.size) {
           val (cl, s) = l(start)
-          if (si.subsetOf(cl)) {
-            val c = si -- s
+          if (si.data.subsetOf(cl.data)) {
+            val c = si.data -- s.data
             if (c.nonEmpty) {
               found = true
               links += idx -> start
