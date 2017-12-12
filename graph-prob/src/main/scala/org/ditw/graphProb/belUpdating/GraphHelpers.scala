@@ -11,7 +11,12 @@ import scala.reflect.{ClassTag, classTag, _}
 object GraphHelpers {
 
   case class Factor(id:String, desc:String)
-  case class Potential(factorIds:Set[String], data:AnyRef)
+
+  case class Potential(ids:Set[String], condIds:Set[String], data:AnyRef) {
+    val allIds = ids ++ condIds
+  }
+
+  case class PotentialData(vars:IndexedSeq[IndexedSeq[String]], probs:Array[Double])
 
   case class ProbModel(potentials:List[Potential], desc:String = "")
 
@@ -26,10 +31,10 @@ object GraphHelpers {
   }
 
   def graphFromModel[T <: VertexEdge : ClassTag](model:ProbModel):SimpleGraph[String, T] = {
-    val vertexIds = model.potentials.flatMap(_.factorIds)
+    val vertexIds = model.potentials.flatMap(_.allIds)
 
     val edges = model.potentials.flatMap { p =>
-      val fids = p.factorIds.toArray.sorted
+      val fids = p.allIds.toArray.sorted
       val pairs = for (i <- fids.indices; j <- i+1 until fids.length) yield fids(i)-> fids(j)
       pairs
     }

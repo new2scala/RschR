@@ -329,6 +329,35 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
         1 -> 2,
         2 -> 3
       )
+    ),
+    (
+      // example from "variable-elimination.pdf"
+      ProbModel(
+        List(
+          Potential(Set("A"), dummy),
+          Potential(Set("A", "B"), dummy),
+          Potential(Set("A", "C"), dummy),
+          Potential(Set("B", "C", "D"), dummy),
+          Potential(Set("C", "E"), dummy)
+        )
+      ),
+      buildGraph(
+        "A" -> "B",
+        "A" -> "C",
+        "B" -> "C",
+        "B" -> "D",
+        "C" -> "D",
+        "C" -> "E"
+      ),
+      IndexedSeq(
+        Set("A", "B", "C") -> Set("B", "C"),
+        Set("B", "C", "D") -> Set("C"),
+        Set("C", "E") -> Set()
+      ),
+      List(
+        0 -> 1,
+        1 -> 2
+      )
     )
   )
 
