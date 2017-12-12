@@ -1,7 +1,7 @@
 package org.ditw.graphProb
 
-import org.ditw.graphProb.JGraphSmokeTest.dummy
 import org.ditw.graphProb.belUpdating.EnrichedGraphOps
+import org.ditw.graphProb.belUpdating.Potentials._
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -301,12 +301,12 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
     (
       ProbModel(
         List(
-          Potential(Set("F1"), dummy),
-          Potential(Set("F1", "F2"), dummy),
-          Potential(Set("F1", "F3"), dummy),
-          Potential(Set("F2", "F4"), dummy),
-          Potential(Set("F2", "F3", "F5"), dummy),
-          Potential(Set("F3", "F6"), dummy)
+          Potential(Set("F1"), Set(), dummy),
+          Potential(Set("F1"), Set("F2"), dummy),
+          Potential(Set("F1"), Set("F3"), dummy),
+          Potential(Set("F2"), Set("F4"), dummy),
+          Potential(Set("F5"), Set("F2", "F3"), dummy),
+          Potential(Set("F3"), Set("F6"), dummy)
         )
       ),
       buildGraph(
@@ -334,11 +334,11 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
       // example from "variable-elimination.pdf"
       ProbModel(
         List(
-          Potential(Set("A"), dummy),
-          Potential(Set("A", "B"), dummy),
-          Potential(Set("A", "C"), dummy),
-          Potential(Set("B", "C", "D"), dummy),
-          Potential(Set("C", "E"), dummy)
+          Potential(Set("A"), Set(), dummy),
+          Potential(Set("B"), Set("A"), dummy),
+          Potential(Set("C"), Set("A"), dummy),
+          Potential(Set("D"), Set("B", "C"), dummy),
+          Potential(Set("E"), Set("C"), dummy)
         )
       ),
       buildGraph(

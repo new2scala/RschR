@@ -1,6 +1,7 @@
 package org.ditw.graphProb.belUpdating
 
-import org.ditw.graphProb.belUpdating.GraphHelpers.{Potential, ProbModel}
+import org.ditw.graphProb.belUpdating.GraphHelpers.ProbModel
+import org.ditw.graphProb.belUpdating.Potentials.Potential
 import org.ditw.graphProb.belUpdating.TriangulatedGraphHelpers.VertexEdge
 import org.jgrapht.graph.SimpleGraph
 
@@ -115,7 +116,7 @@ object EnrichedGraphOps {
 
     var nodeMap = mutable.Map[String, mutable.Set[Potential]]()
     probModel.potentials.foreach { pot =>
-      val superSetNodes = jt._nodes.find(n => pot.factorIds.subsetOf(n.data))
+      val superSetNodes = jt._nodes.find(n => pot.allIds.subsetOf(n.data))
       if (superSetNodes.size != 1)
         throw new IllegalArgumentException("Expect 1 superset!!")
       val sn = superSetNodes.head

@@ -12,11 +12,7 @@ object GraphHelpers {
 
   case class Factor(id:String, desc:String)
 
-  case class Potential(ids:Set[String], condIds:Set[String], data:AnyRef) {
-    val allIds = ids ++ condIds
-  }
-
-  case class PotentialData(vars:IndexedSeq[IndexedSeq[String]], probs:Array[Double])
+  import Potentials._
 
   case class ProbModel(potentials:List[Potential], desc:String = "")
 

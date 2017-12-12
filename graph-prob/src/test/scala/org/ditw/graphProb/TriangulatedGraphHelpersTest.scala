@@ -1,8 +1,8 @@
 package org.ditw.graphProb
 
-import org.ditw.graphProb.JGraphSmokeTest.dummy
 import org.ditw.graphProb.belUpdating.EnrichedGraph
-import org.ditw.graphProb.belUpdating.GraphHelpers.{Potential, ProbModel}
+import org.ditw.graphProb.belUpdating.GraphHelpers.ProbModel
+import org.ditw.graphProb.belUpdating.Potentials._
 import org.jgrapht.graph.SimpleGraph
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{FlatSpec, Matchers}
@@ -17,11 +17,11 @@ class TriangulatedGraphHelpersTest extends FlatSpec with Matchers with TableDriv
     (
       ProbModel(
         List(
-          Potential(Set("F1", "F2"), dummy),
-          Potential(Set("F1", "F3"), dummy),
-          Potential(Set("F2", "F4"), dummy),
-          Potential(Set("F2", "F3", "F5"), dummy),
-          Potential(Set("F3", "F6"), dummy)
+          Potential(Set("F1", "F2"), Set(), dummy),
+          Potential(Set("F1", "F3"), Set(), dummy),
+          Potential(Set("F2", "F4"), Set(), dummy),
+          Potential(Set("F2", "F3", "F5"), Set(), dummy),
+          Potential(Set("F3", "F6"), Set(), dummy)
         )
       ),
       Set("F1", "F4", "F5", "F6")
@@ -29,10 +29,10 @@ class TriangulatedGraphHelpersTest extends FlatSpec with Matchers with TableDriv
     (
       ProbModel(
         List(
-          Potential(Set("A1", "A2", "A3", "A4"), dummy),
-          Potential(Set("A5", "A3"), dummy),
-          Potential(Set("A2", "A5"), dummy),
-          Potential(Set("A4", "A5"), dummy)
+          Potential(Set("A1", "A2", "A3", "A4"), Set(), dummy),
+          Potential(Set("A5", "A3"), Set(), dummy),
+          Potential(Set("A2", "A5"), Set(), dummy),
+          Potential(Set("A4", "A5"), Set(), dummy)
         )
       ),
       Set("A1", "A5")
@@ -40,10 +40,10 @@ class TriangulatedGraphHelpersTest extends FlatSpec with Matchers with TableDriv
     (
       ProbModel(
         List(
-          Potential(Set("A1", "A2", "A3"), dummy),
-          Potential(Set("A1", "A3", "A4"), dummy),
-          Potential(Set("A2", "A3", "A5"), dummy),
-          Potential(Set("A3", "A4", "A5"), dummy)
+          Potential(Set("A1", "A2", "A3"), Set(), dummy),
+          Potential(Set("A1", "A3", "A4"), Set(), dummy),
+          Potential(Set("A2", "A3", "A5"), Set(), dummy),
+          Potential(Set("A3", "A4", "A5"), Set(), dummy)
         )
       ),
       Set()
