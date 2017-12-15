@@ -2,6 +2,7 @@ package org.ditw.graphProb
 
 import org.ditw.graphProb.belUpdating.EnrichedGraphOps
 import org.ditw.graphProb.belUpdating.Potentials._
+import org.ditw.graphProb.belUpdating.ProbModels.ProbModel
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -364,19 +365,70 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
 
   "junctionTreeTest tests" should "pass" in {
     forAll(junctionTreeTestData) { (model, eg, pairs, links) =>
-//      val (p, l) = eg._genJoinTree
-//
-//      val jt = eg.joinTree
-//      //println(jt)
-//      jt.allEdges.foreach { edge =>
-//        val ed = jt.edgeData(edge._1, edge._2)
-//        ed shouldNot be(null)
-//      }
-
       val jut = buildJunctionTree(model)
 
-      println(jut)
+      jut.allNodes.foreach { n =>
+        val leaves = jut.leafNodesFrom(n)
+        println(leaves)
+      }
+
     }
   }
 
+  private val junctionTreeWithPotentialTestData = Table(
+    ("model", "enrichedGraph", "nodeSetPairs", "links"),
+    (
+      // example from "variable-elimination.pdf"
+      ProbModel(
+        List(
+          Potential(
+            Set("A"), Set(),
+            PotentialData(BooleanVars1, Array(0.6, 0.4))
+          ),
+          Potential(
+            Set("B"), Set("A"),
+            PotentialData(BooleanVars2, Array(0.2, 0.8, 0.75, 0.25))
+          ),
+          Potential(
+            Set("C"), Set("A"),
+            PotentialData(BooleanVars2, Array(0.8, 0.2, 0.1, 0.9))
+          ),
+          Potential(
+            Set("D"), Set("B", "C"),
+            PotentialData(BooleanVars3, Array(0.95, 0.05, 0.9, 0.1, 0.8, 0.2, 0.0, 1.0))
+          ),
+          Potential(
+            Set("E"), Set("C"),
+            PotentialData(BooleanVars2, Array(0.7, 0.3, 0.0, 1.0))
+          )
+        )
+      ),
+      buildGraph(
+        "A" -> "B",
+        "A" -> "C",
+        "B" -> "C",
+        "B" -> "D",
+        "C" -> "D",
+        "C" -> "E"
+      ),
+      IndexedSeq(
+        Set("A", "B", "C") -> Set("B", "C"),
+        Set("B", "C", "D") -> Set("C"),
+        Set("C", "E") -> Set()
+      ),
+      List(
+        0 -> 1,
+        1 -> 2
+      )
+    )
+  )
+
+  "junctionTreeWithPotentialTest tests" should "pass" in {
+    forAll(junctionTreeWithPotentialTestData) { (model, eg, pairs, links) =>
+      val jut = buildJunctionTree(model)
+
+      println(jut)
+
+    }
+  }
 }

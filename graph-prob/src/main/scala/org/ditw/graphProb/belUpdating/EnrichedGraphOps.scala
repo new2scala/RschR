@@ -1,7 +1,7 @@
 package org.ditw.graphProb.belUpdating
 
-import org.ditw.graphProb.belUpdating.GraphHelpers.ProbModel
 import org.ditw.graphProb.belUpdating.Potentials.Potential
+import org.ditw.graphProb.belUpdating.ProbModels.ProbModel
 import org.ditw.graphProb.belUpdating.TriangulatedGraphHelpers.VertexEdge
 import org.jgrapht.graph.SimpleGraph
 
@@ -77,10 +77,37 @@ object EnrichedGraphOps {
 
     def allEdges:Iterable[(String, String)] = edges
 
+    private val nodeIds:Set[String] = _nodes.map(_.id).toSet
+    def allNodes = nodeIds
+
     def edgeData(edge:(String,String)):GrafData[EdgeData] = {
       edgeMap(edge)
     }
     //private val edgeMap = _edges.map(n => n.id -> n).toMap
+
+    import collection.mutable
+    import collection.JavaConverters._
+    def leafNodesFrom(tmpRoot:String):List[String] = {
+      val visited = mutable.Set[String]()
+      val toVisit = mutable.Set[String]()
+      val leaves = ListBuffer[String]()
+      toVisit.add(tmpRoot)
+
+      while (toVisit.nonEmpty) {
+        val n = toVisit.head
+        toVisit.remove(n)
+
+        val newVertice = _graph.edgesOf(n).asScala.map { edge =>
+          (edge.vertices.toSet - n).head
+        }.diff(visited)
+
+        if (newVertice.isEmpty) leaves += n
+        else toVisit ++= newVertice
+
+        visited.add(n)
+      }
+      leaves.toList
+    }
   }
 
   private def buildJoinTree[NodeData, EdgeData](

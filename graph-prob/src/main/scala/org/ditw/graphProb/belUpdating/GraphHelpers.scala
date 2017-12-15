@@ -1,5 +1,6 @@
 package org.ditw.graphProb.belUpdating
 
+import org.ditw.graphProb.belUpdating.ProbModels.ProbModel
 import org.ditw.graphProb.belUpdating.TriangulatedGraphHelpers.VertexEdge
 import org.jgrapht.Graph
 import org.jgrapht.graph.{DefaultEdge, SimpleGraph}
@@ -13,8 +14,6 @@ object GraphHelpers {
   case class Factor(id:String, desc:String)
 
   import Potentials._
-
-  case class ProbModel(potentials:List[Potential], desc:String = "")
 
   def createSimpleGraph[T <: VertexEdge : ClassTag]:SimpleGraph[String, T] =
     new SimpleGraph[String, T](classTag[T].runtimeClass.asInstanceOf[Class[T]])

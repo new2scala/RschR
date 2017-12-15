@@ -1,8 +1,8 @@
 package org.ditw.graphProb
 
 import org.ditw.graphProb.belUpdating.EnrichedGraph
-import org.ditw.graphProb.belUpdating.GraphHelpers.ProbModel
 import org.ditw.graphProb.belUpdating.Potentials._
+import org.ditw.graphProb.belUpdating.ProbModels.ProbModel
 import org.jgrapht.graph.SimpleGraph
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{FlatSpec, Matchers}

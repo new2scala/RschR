@@ -6,6 +6,7 @@ import java.util
 import javax.swing.JApplet
 
 import org.ditw.graphProb.belUpdating.GraphHelpers._
+import org.ditw.graphProb.belUpdating.ProbModels.ProbModel
 import org.ditw.graphProb.belUpdating.TriangulatedGraphHelpers.VertexEdge
 import org.jgraph.JGraph
 import org.jgraph.graph.{AttributeMap, GraphConstants}

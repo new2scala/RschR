@@ -6,7 +6,7 @@ package org.ditw.graphProb.belUpdating
 object Potentials {
   val dummy = null
 
-  case class Potential(ids:Set[String], condIds:Set[String], data:AnyRef) {
+  case class Potential(ids:Set[String], condIds:Set[String], data:PotentialData) {
     val allIds = ids ++ condIds
   }
 
@@ -36,7 +36,8 @@ object Potentials {
     def getProb(p:Int):Double = throw new IllegalAccessError("Operation not supported!")
   }
 
-  private def buildProbTree(vars:IndexedSeq[IndexedSeq[String]], pathSoFar:IndexedSeq[Int], probs:Array[Double]):TPotentialProbTreeNode = {
+  private def buildProbTree(vars:IndexedSeq[IndexedSeq[String]], pathSoFar:IndexedSeq[Int], probs:Array[Double])
+    :TPotentialProbTreeNode = {
     if (vars.size < 1) {
       throw new IllegalArgumentException("Requires at least one variable")
     }
