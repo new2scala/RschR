@@ -56,4 +56,62 @@ class PotentialsTests extends FlatSpec with Matchers with TableDrivenPropertyChe
       }
     }
   }
+
+  private val mergeSubTreeTestData = Table(
+    ("vars", "probs", "mergedVars", "mergedProbs"),
+    (
+      BooleanVars3,
+      Array(0.95, 0.05, 0.9, 0.1, 0.8, 0.2, 0, 1),
+//      List(
+//        IndexedSeq(0, 0, 0) -> 0.95,
+//        IndexedSeq(0, 0, 1) -> 0.05,
+//        IndexedSeq(0, 1, 0) -> 0.9,
+//        IndexedSeq(0, 1, 1) -> 0.1,
+//        IndexedSeq(1, 0, 0) -> 0.8,
+//        IndexedSeq(1, 0, 1) -> 0.2,
+//        IndexedSeq(1, 1, 0) -> 0.0,
+//        IndexedSeq(1, 1, 1) -> 1.0
+//      )
+      BooleanVars2,
+      Array(1.75, 0.25, 0.9, 1.1)
+    ),
+    (
+      BooleanVars2,
+      Array(0.2, 0.8, 0.75, 0.25),
+      BooleanVars1,
+      Array(0.95, 1.05)
+    )
+  )
+
+  def compareTree(t1:TPotentialProbTreeNode, t2:TPotentialProbTreeNode):Boolean = {
+    if (t1.isInstanceOf[PotentialProbTreeLeaf]) {
+      val l1 = t1.asInstanceOf[PotentialProbTreeLeaf]
+      val l2 = t2.asInstanceOf[PotentialProbTreeLeaf]
+
+      l1.vars == l2.vars &&
+        l1.probs.indices.forall { idx =>
+          math.abs(l1.probs(idx) - l2.probs(idx)) < doubleTolerance
+        }
+    }
+    else {
+      val n1 = t1.asInstanceOf[PotentialProbTreeNonLeaf]
+      val n2 = t2.asInstanceOf[PotentialProbTreeNonLeaf]
+
+      n1.vars == n2.vars &&
+        n1.children.indices.forall { idx =>
+          compareTree(n1.children(idx), n2.children(idx))
+        }
+    }
+  }
+
+  "mergeSubTree test" should "pass" in {
+    forAll(mergeSubTreeTestData) { (vars, probs, mergedVars, mergedProbs) =>
+      val t = PotentialData(vars, probs)
+      val m = mergeSubTree(t.treeRoot)
+
+      var t2 = PotentialData(mergedVars, mergedProbs)
+
+      compareTree(m, t2.treeRoot) shouldBe true
+    }
+  }
 }
