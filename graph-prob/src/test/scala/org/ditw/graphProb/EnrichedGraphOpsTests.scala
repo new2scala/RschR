@@ -383,23 +383,23 @@ class EnrichedGraphOpsTests extends FlatSpec with Matchers with TableDrivenPrope
         List(
           Potential(
             Set("A"), Set(),
-            PotentialData(BooleanVars1, Array(0.6, 0.4))
+            genPotentialData(BooleanVars1, Array(0.6, 0.4))
           ),
           Potential(
             Set("B"), Set("A"),
-            PotentialData(BooleanVars2, Array(0.2, 0.8, 0.75, 0.25))
+            genPotentialData(BooleanVars2, Array(0.2, 0.8, 0.75, 0.25))
           ),
           Potential(
             Set("C"), Set("A"),
-            PotentialData(BooleanVars2, Array(0.8, 0.2, 0.1, 0.9))
+            genPotentialData(BooleanVars2, Array(0.8, 0.2, 0.1, 0.9))
           ),
           Potential(
             Set("D"), Set("B", "C"),
-            PotentialData(BooleanVars3, Array(0.95, 0.05, 0.9, 0.1, 0.8, 0.2, 0.0, 1.0))
+            genPotentialData(BooleanVars3, Array(0.95, 0.05, 0.9, 0.1, 0.8, 0.2, 0.0, 1.0))
           ),
           Potential(
             Set("E"), Set("C"),
-            PotentialData(BooleanVars2, Array(0.7, 0.3, 0.0, 1.0))
+            genPotentialData(BooleanVars2, Array(0.7, 0.3, 0.0, 1.0))
           )
         )
       ),

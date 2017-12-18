@@ -49,7 +49,7 @@ class PotentialsTests extends FlatSpec with Matchers with TableDrivenPropertyChe
 
   "buildProbTree test" should "pass" in {
     forAll(buildProbTreeTestData) { (vars, probs, getProbTests) =>
-      val t = PotentialData(vars, probs)
+      val t = genPotentialData(vars, probs)
       getProbTests.foreach { p =>
         val diff = Math.abs(t.getProb(p._1) - p._2)
         diff shouldBe <(doubleTolerance)
@@ -106,12 +106,48 @@ class PotentialsTests extends FlatSpec with Matchers with TableDrivenPropertyChe
 
   "mergeSubTree test" should "pass" in {
     forAll(mergeSubTreeTestData) { (vars, probs, mergedVars, mergedProbs) =>
-      val t = PotentialData(vars, probs)
+      val t = genPotentialData(vars, probs)
       val m = mergeSubTree(t.treeRoot)
 
-      var t2 = PotentialData(mergedVars, mergedProbs)
+      var t2 = genPotentialData(mergedVars, mergedProbs)
 
       compareTree(m, t2.treeRoot) shouldBe true
+    }
+  }
+
+  private val marginalizeTestData = Table(
+    ("vars", "probs", "marginalizeIndices", "mergedVars", "mergedProbs"),
+    (
+      BooleanVars3,
+      Array(0.95, 0.05, 0.9, 0.1, 0.8, 0.2, 0, 1),
+      Set(0, 2),
+      BooleanVars1,
+      Array(2.65, 1.35)
+    ),
+    (
+      BooleanVars3,
+      Array(0.95, 0.05, 0.9, 0.1, 0.8, 0.2, 0, 1),
+      Set(0),
+      BooleanVars2,
+      Array(1.75, 0.25, 0.9, 1.1)
+    ),
+    (
+      BooleanVars2,
+      Array(0.2, 0.8, 0.75, 0.25),
+      Set(0),
+      BooleanVars1,
+      Array(0.95, 1.05)
+    )
+  )
+
+  "marginalize test" should "pass" in {
+    forAll(marginalizeTestData) { (vars, probs, marginalizeIndices, mergedVars, mergedProbs) =>
+      val t = genPotentialData(vars, probs)
+      val m = t.marginalize(marginalizeIndices)
+
+      var t2 = genPotentialData(mergedVars, mergedProbs)
+
+      compareTree(m.treeRoot, t2.treeRoot) shouldBe true
     }
   }
 }

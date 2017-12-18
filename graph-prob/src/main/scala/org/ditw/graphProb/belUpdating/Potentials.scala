@@ -110,6 +110,16 @@ object Potentials {
     }
   }
 
+  private[graphProb] def mergeChildren(nonLeafParent:PotentialProbTreeNonLeaf, depth:Int):TPotentialProbTreeNode = {
+    if (depth > 2) {
+      val mergedChildren = nonLeafParent.children.map(c => mergeChildren(c.asInstanceOf[PotentialProbTreeNonLeaf], depth-1))
+      nonLeafParent.clone(mergedChildren)
+    }
+    else {
+      mergeSubTree(nonLeafParent)
+    }
+  }
+
   private def addChildren(n1:TPotentialProbTreeNode, n2:TPotentialProbTreeNode):TPotentialProbTreeNode = {
     n1 match {
       case nonLeaf:PotentialProbTreeNonLeaf => {
@@ -133,8 +143,11 @@ object Potentials {
   val BooleanVars2 = IndexedSeq(BooleanVars, BooleanVars)
   val BooleanVars3 = IndexedSeq(BooleanVars, BooleanVars, BooleanVars)
 
-  case class PotentialData(vars:IndexedSeq[IndexedSeq[String]], probs:Array[Double]) {
-    private val _probTree:TPotentialProbTreeNode = buildProbTree(vars, probs)
+  def genPotentialData(vars:IndexedSeq[IndexedSeq[String]], probs:Array[Double]):PotentialData = {
+    PotentialData(vars, buildProbTree(vars, probs))
+  }
+
+  case class PotentialData(vars:IndexedSeq[IndexedSeq[String]], private val _probTree:TPotentialProbTreeNode) {
     private[graphProb] def treeRoot:TPotentialProbTreeNode = _probTree
 
     def getProb(path:IndexedSeq[Int]):Double = {
@@ -154,14 +167,19 @@ object Potentials {
       }
     }
 
-//    def marginalize(indices:Set[Int]):PotentialData = {
-//      var tmpVars:IndexedSeq[IndexedSeq[String]] = IndexedSeq()
-//      var tmpProbs:Array[Double] = Array()
-//
-//      indices.foreach { idx =>
-//        tmpVars = vars.slice(0, idx) ++ vars.slice(idx+1, vars.size)
-//
-//      }
-//    }
+    def marginalize(indices:Set[Int]):PotentialData = {
+      var s = indices
+      var newProbTree:TPotentialProbTreeNode = _probTree
+      var removed = 0
+      while (s.nonEmpty) {
+        val removedCount = indices.size - s.size
+        val min = s.min
+        s -= min
+        val adjustedMin = min - removedCount
+        newProbTree = mergeChildren(newProbTree.asInstanceOf[PotentialProbTreeNonLeaf], adjustedMin+1)
+      }
+      val newVars = vars.indices.filter(idx => !indices.contains(idx)).map(vars)
+      PotentialData(newVars, newProbTree)
+    }
   }
 }
