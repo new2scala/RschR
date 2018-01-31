@@ -120,6 +120,20 @@ class PotentialsTests extends FlatSpec with Matchers with TableDrivenPropertyChe
     (
       BooleanVars3,
       Array(0.95, 0.05, 0.9, 0.1, 0.8, 0.2, 0, 1),
+      Set(1, 2),
+      BooleanVars1,
+      Array(2.0, 2.0)
+    ),
+    (
+      BooleanVars3,
+      Array(0.95, 0.05, 0.9, 0.1, 0.8, 0.2, 0, 1),
+      Set(1),
+      BooleanVars2,
+      Array(1.85, 0.15, 0.8, 1.2)
+    ),
+    (
+      BooleanVars3,
+      Array(0.95, 0.05, 0.9, 0.1, 0.8, 0.2, 0, 1),
       Set(0, 2),
       BooleanVars1,
       Array(2.65, 1.35)

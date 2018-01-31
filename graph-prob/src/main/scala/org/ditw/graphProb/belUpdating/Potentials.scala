@@ -110,13 +110,17 @@ object Potentials {
     }
   }
 
-  private[graphProb] def mergeChildren(nonLeafParent:PotentialProbTreeNonLeaf, depth:Int):TPotentialProbTreeNode = {
-    if (depth > 2) {
-      val mergedChildren = nonLeafParent.children.map(c => mergeChildren(c.asInstanceOf[PotentialProbTreeNonLeaf], depth-1))
-      nonLeafParent.clone(mergedChildren)
+  private[graphProb] def mergeChildren(nonLeafParent:PotentialProbTreeNonLeaf, depth:Int, depthFromLeaf:Int):TPotentialProbTreeNode = {
+    if (depth == 0) {
+      mergeSubTree(nonLeafParent)
     }
     else {
-      mergeSubTree(nonLeafParent)
+      if (depth + depthFromLeaf <= 1)
+        mergeSubTree(nonLeafParent)
+      else {
+        val c1 = nonLeafParent.children.map(c => mergeChildren(c.asInstanceOf[PotentialProbTreeNonLeaf], depth-1, depthFromLeaf))
+        nonLeafParent.clone(c1)
+      }
     }
   }
 
@@ -175,8 +179,9 @@ object Potentials {
         val removedCount = indices.size - s.size
         val min = s.min
         s -= min
-        val adjustedMin = min - removedCount
-        newProbTree = mergeChildren(newProbTree.asInstanceOf[PotentialProbTreeNonLeaf], adjustedMin+1)
+        val depthFromLeaf = vars.size - removedCount - min
+        val currDepth = min-removedCount
+        newProbTree = mergeChildren(newProbTree.asInstanceOf[PotentialProbTreeNonLeaf], currDepth, depthFromLeaf)
       }
       val newVars = vars.indices.filter(idx => !indices.contains(idx)).map(vars)
       PotentialData(newVars, newProbTree)
