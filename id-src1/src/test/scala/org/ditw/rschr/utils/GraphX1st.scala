@@ -40,9 +40,10 @@ object GraphX1st extends App {
 
   val checkedGraph = graph.subgraph(vpred = (id, attr) => attr._1 != "N/A")
 
-  checkedGraph.triplets.map(
-    triplet => triplet.srcAttr._1 + " is the " + triplet.attr + " of " + triplet.dstAttr._1
-  ).collect.foreach(println(_))
+  println(GraphUtils.traceGraph(checkedGraph))
+//  checkedGraph.triplets.map(
+//    triplet => triplet.srcAttr._1 + " is the " + triplet.attr + " of " + triplet.dstAttr._1
+//  ).collect.foreach(println(_))
 
 
   println(edgesFrom5)

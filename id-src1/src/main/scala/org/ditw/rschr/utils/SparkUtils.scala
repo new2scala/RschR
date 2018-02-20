@@ -46,4 +46,5 @@ object SparkUtils {
     val conf = config(true, appName, numReducer)
     SparkSession.builder.config(conf).getOrCreate()
   }
+
 }
