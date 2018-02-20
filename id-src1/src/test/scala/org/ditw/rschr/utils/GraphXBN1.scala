@@ -39,23 +39,23 @@ object GraphXBN1 extends App {
 
   private val _arrayTodo = Array[Double]()
 
-  def bnFromPotentials():BayNet = {
-    val pots = Iterable(
-      Potential(2, Array(1L), _arrayTodo),
-      Potential(3, Array(1L), _arrayTodo),
-      Potential(4, Array(2L), _arrayTodo),
-      Potential(5, Array(2L, 3L), _arrayTodo),
-      Potential(6, Array(3L), _arrayTodo)
-    )
-
-    BayNet(pots)
-  }
-
-  val bn = bnFromPotentials
-  println("=== Bayesian Net ===")
-  println(GraphUtils.traceGraph(bn.toGraph(spark)))
-  println("=== Domain Graph ===")
-  println(GraphUtils.traceGraph(bn.toDomainGraph(spark)))
+//  def bnFromPotentials():BayNet = {
+//    val pots = Iterable(
+//      Potential(2, Array(1L), _arrayTodo),
+//      Potential(3, Array(1L), _arrayTodo),
+//      Potential(4, Array(2L), _arrayTodo),
+//      Potential(5, Array(2L, 3L), _arrayTodo),
+//      Potential(6, Array(3L), _arrayTodo)
+//    )
+//
+//    BayNet(pots)
+//  }
+//
+//  val bn = bnFromPotentials
+//  println("=== Bayesian Net ===")
+//  println(GraphUtils.traceGraph(bn.toGraph(spark)))
+//  println("=== Domain Graph ===")
+//  println(GraphUtils.traceGraph(bn.toDomainGraph(spark)))
 
   spark.stop()
 }

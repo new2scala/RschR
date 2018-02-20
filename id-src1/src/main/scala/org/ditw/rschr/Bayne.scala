@@ -13,7 +13,37 @@ object Bayne {
   private val ToRel = "->"
   private val MissingNode = "N/A"
 
-  case class Potential(n:NodeId, pars:Array[NodeId], probs:Array[Double])
+  type ChildParentPair = (NodeId, Array[NodeId])
+  type ChildParentProbs = (ChildParentPair, Array[Double])
+
+  case class NodeValueSets(vm:Map[NodeId, Int])
+
+  case class Potential(n:NodeId, pars:Array[NodeId], vs:NodeValueSets, probs:Array[Double]) {
+    def prob(nValueIdx:Int, parsValueIndices:Array[Int]):Double = {
+      var idx = nValueIdx
+      var dim = vs.vm(n)
+      (0 until pars.length-1).foreach { parIdx =>
+        val parNode = pars(parIdx)
+        val parValueIdx = parsValueIndices(parIdx)
+        val parDim = vs.vm(parNode)
+        idx += parValueIdx*dim
+        dim *= parDim
+      }
+      idx += parsValueIndices.last*dim
+      probs(idx)
+    }
+  }
+
+  def createBayNet(child2ParentsProbs:Iterable[ChildParentProbs], vm:Map[NodeId, Int]): BayNet = {
+    val nodeValueSets = NodeValueSets(vm)
+
+    val pots = child2ParentsProbs.map { c2p =>
+      val (p, probs) = c2p
+      Potential(p._1, p._2, nodeValueSets, probs)
+    }
+
+    BayNet(pots)
+  }
 
   case class BayNet(potentials:Iterable[Potential]) {
     private val _nodes = potentials
