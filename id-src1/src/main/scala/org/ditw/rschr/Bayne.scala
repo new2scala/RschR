@@ -18,19 +18,33 @@ object Bayne {
 
   case class NodeValueSets(vm:Map[NodeId, Int])
 
-  case class Potential(n:NodeId, pars:Array[NodeId], vs:NodeValueSets, probs:Array[Double]) {
-    def prob(nValueIdx:Int, parsValueIndices:Array[Int]):Double = {
-      var idx = nValueIdx
-      var dim = vs.vm(n)
-      (0 until pars.length-1).foreach { parIdx =>
-        val parNode = pars(parIdx)
-        val parValueIdx = parsValueIndices(parIdx)
+  case class ProbDistr(nodes:Array[NodeId], vs:NodeValueSets, probs:Array[Double]) {
+    def prob(valueIndices:Array[Int]):Double = {
+      var idx = valueIndices(0)
+      var dim = vs.vm(nodes(0))
+      (1 until nodes.length-1).foreach { parIdx =>
+        val parNode = nodes(parIdx)
+        val parValueIdx = valueIndices(parIdx)
         val parDim = vs.vm(parNode)
         idx += parValueIdx*dim
         dim *= parDim
       }
-      idx += parsValueIndices.last*dim
+      idx += valueIndices.last*dim
       probs(idx)
+    }
+
+    def probs(nid:NodeId):Array[Double] = {
+      val nidx = nodes.indexOf(nid)
+      if (nidx < 0) throw new IllegalArgumentException(s"Unknown node id [$nid]")
+
+
+    }
+  }
+
+  case class Potential(n:NodeId, pars:Array[NodeId], vs:NodeValueSets, probs:Array[Double]) {
+    private val _prob = ProbDistr(Array(n) ++ pars, vs, probs)
+    def prob(nValueIdx:Int, parsValueIndices:Array[Int]):Double = {
+      _prob.prob(Array(nValueIdx) ++ parsValueIndices)
     }
   }
 
@@ -70,6 +84,22 @@ object Bayne {
       }
       Graph(spark.parallelize(_nodes), spark.parallelize(domainEdges.toSeq), MissingNode)
     }
+  }
+
+  private def _eliminateOne(n:NodeId, prob1:ProbDistr, prob2:ProbDistr):ProbDistr = {
+    val idx1 = prob1.nodes.indexOf(n)
+    val idx2 = prob2.nodes.indexOf(n)
+    if (idx1 < 0 || idx2 < 0) throw new IllegalArgumentException(s"Node [$n] not found in at least one prob distributions")
+
+    val commonNodeIds = prob1.nodes.toSet.intersect(prob2.nodes.toSet).toArray.sorted
+
+    val flatProbs = commonNodeIds.flatMap { cn =>
+      val cnIdx = prob1.nodes.indexOf(cn)
+    }
+  }
+
+  def eliminate(n:NodeId, probs:Iterable[ProbDistr]):ProbDistr = {
+
   }
 
 //  def potentials2Graph(spark:SparkContext, pots:Iterable[Potential]):Graph[String,String] = {
