@@ -130,10 +130,10 @@ class PotentialTests extends FlatSpec with Matchers with TableDrivenPropertyChec
 //    )
   )
 
-  "Elimination test" should "pass" in {
-    forAll(eliminateTestData) { (probDistrs, node2Elim, newDistr) =>
-      val r = Bayne.eliminate(node2Elim, probDistrs)
-      r shouldBe newDistr
-    }
-  }
+//  "Elimination test" should "pass" in {
+//    forAll(eliminateTestData) { (probDistrs, node2Elim, newDistr) =>
+//      val r = Bayne.eliminate(node2Elim, probDistrs)
+//      r shouldBe newDistr
+//    }
+//  }
 }

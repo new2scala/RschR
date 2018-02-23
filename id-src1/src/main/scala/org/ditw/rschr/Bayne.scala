@@ -16,7 +16,19 @@ object Bayne {
   type ChildParentPair = (NodeId, Array[NodeId])
   type ChildParentProbs = (ChildParentPair, Array[Double])
 
-  case class NodeValueSets(vm:Map[NodeId, Int])
+  import collection.mutable
+
+  case class NodeValueSets(vm:Map[NodeId, Int]) {
+    def valSet(nid:NodeId):IndexedSeq[Int] = 0 until vm(nid)
+    def valSets(nids:Seq[NodeId]):IndexedSeq[IndexedSeq[Int]] = {
+      val r:mutable.IndexedSeq[IndexedSeq[Int]] = mutable.IndexedSeq(IndexedSeq())
+      nids.foldLeft(r)(
+        (sseq, nid) => {
+          sseq.flatMap(seq => valSet(nid).map(seq :+ _))
+        }
+      )
+    }
+  }
 
   case class ProbDistr(nodes:Array[NodeId], vs:NodeValueSets, probs:Array[Double]) {
     def prob(valueIndices:Array[Int]):Double = {
@@ -33,12 +45,29 @@ object Bayne {
       probs(idx)
     }
 
-    def probs(nid:NodeId):Array[Double] = {
+    def probsOf(nid:NodeId, remValueIndices:Array[Int]):Array[Double] = {
       val nidx = nodes.indexOf(nid)
       if (nidx < 0) throw new IllegalArgumentException(s"Unknown node id [$nid]")
 
-
+      val nVals = vs.vm(nid)
+      (0 until nVals).map { nVal =>
+        val valIndices1 =  remValueIndices.slice(0, nidx).toIndexedSeq
+        val valIndices2 = remValueIndices.slice(nidx+1, remValueIndices.length)
+        val valIndices = valIndices1 ++ IndexedSeq(nVal) ++ valIndices2
+        prob(valIndices.toArray)
+      }.toArray
     }
+
+//    def probsOf(nids:Array[NodeId]):Array[Array[Double]] = {
+////      val nidx = nodes.indexOf(nid)
+////      if (nidx < 0) throw new IllegalArgumentException(s"Unknown node id [$nid]")
+//
+//      val nodeIdxs = nids.map(nodes.indexOf)
+//      if (nodeIdxs.contains(-1)) throw new IllegalArgumentException(s"Unknown node id found!")
+//
+//      val remIdxs = nodes.indices.filter(x => !nodeIdxs.contains(x)).map(nodes)
+//
+//    }
   }
 
   case class Potential(n:NodeId, pars:Array[NodeId], vs:NodeValueSets, probs:Array[Double]) {
@@ -86,21 +115,21 @@ object Bayne {
     }
   }
 
-  private def _eliminateOne(n:NodeId, prob1:ProbDistr, prob2:ProbDistr):ProbDistr = {
-    val idx1 = prob1.nodes.indexOf(n)
-    val idx2 = prob2.nodes.indexOf(n)
-    if (idx1 < 0 || idx2 < 0) throw new IllegalArgumentException(s"Node [$n] not found in at least one prob distributions")
-
-    val commonNodeIds = prob1.nodes.toSet.intersect(prob2.nodes.toSet).toArray.sorted
-
-    val flatProbs = commonNodeIds.flatMap { cn =>
-      val cnIdx = prob1.nodes.indexOf(cn)
-    }
-  }
-
-  def eliminate(n:NodeId, probs:Iterable[ProbDistr]):ProbDistr = {
-
-  }
+//  private def _eliminateOne(n:NodeId, prob1:ProbDistr, prob2:ProbDistr):ProbDistr = {
+//    val idx1 = prob1.nodes.indexOf(n)
+//    val idx2 = prob2.nodes.indexOf(n)
+//    if (idx1 < 0 || idx2 < 0) throw new IllegalArgumentException(s"Node [$n] not found in at least one prob distributions")
+//
+//    val commonNodeIds = prob1.nodes.toSet.intersect(prob2.nodes.toSet).toArray.sorted
+//
+//    val nodeIdxs1 = commonNodeIds.map(prob1.nodes.indexOf)
+//    val nodeIdxs2 = commonNodeIds.map(prob2.nodes.indexOf)
+//
+//  }
+//
+//  def eliminate(n:NodeId, probs:Iterable[ProbDistr]):ProbDistr = {
+//
+//  }
 
 //  def potentials2Graph(spark:SparkContext, pots:Iterable[Potential]):Graph[String,String] = {
 //    val allNodeIds = pots.flatMap(p => Set(p.n) ++ p.pars).toArray.distinct.sorted
