@@ -19,19 +19,42 @@ object Bayne {
   import collection.mutable
 
   case class NodeValueSets(vm:Map[NodeId, Int]) {
-    def valSet(nid:NodeId):IndexedSeq[Int] = 0 until vm(nid)
-    def valSets(nids:Seq[NodeId]):IndexedSeq[IndexedSeq[Int]] = {
+    def valIndexOf(nid:NodeId):IndexedSeq[Int] = 0 until vm(nid)
+    def valIndicesOf(nids:Seq[NodeId]):IndexedSeq[IndexedSeq[Int]] = {
       val r:mutable.IndexedSeq[IndexedSeq[Int]] = mutable.IndexedSeq(IndexedSeq())
       nids.foldLeft(r)(
         (sseq, nid) => {
-          sseq.flatMap(seq => valSet(nid).map(seq :+ _))
+          sseq.flatMap(seq => valIndexOf(nid).map(seq :+ _))
+        }
+      )
+    }
+    def valReverseIndicesOf(nids:Seq[NodeId]):IndexedSeq[IndexedSeq[Int]] = {
+      val r:mutable.IndexedSeq[IndexedSeq[Int]] = mutable.IndexedSeq(IndexedSeq())
+      nids.foldRight(r)(
+        (nid, sseq) => {
+          sseq.flatMap(seq => valIndexOf(nid).map(_ +: seq))
         }
       )
     }
   }
 
-  case class ProbDistr(nodes:Array[NodeId], vs:NodeValueSets, probs:Array[Double]) {
-    def prob(valueIndices:Array[Int]):Double = {
+  private val tolerance = 1e-8
+
+  case class ProbDistr(nodes:IndexedSeq[NodeId], vs:NodeValueSets, probs:IndexedSeq[Double]) {
+
+    override def hashCode(): Int = nodes.hashCode() + vs.hashCode() + probs.hashCode()
+
+    override def equals(obj: scala.Any): Boolean = {
+      obj match {
+        case pd:ProbDistr => {
+          vs.vm == pd.vs.vm && nodes == pd.nodes &&
+            probs.indices.forall(idx => math.abs(probs(idx) - pd.probs(idx)) <= tolerance)
+        }
+        case _ => false
+      }
+    }
+
+    def prob(valueIndices:IndexedSeq[Int]):Double = {
       var idx = valueIndices(0)
       var dim = vs.vm(nodes(0))
       (1 until nodes.length-1).foreach { parIdx =>
@@ -45,17 +68,43 @@ object Bayne {
       probs(idx)
     }
 
-    def probsOf(nid:NodeId, remValueIndices:Array[Int]):Array[Double] = {
-      val nidx = nodes.indexOf(nid)
-      if (nidx < 0) throw new IllegalArgumentException(s"Unknown node id [$nid]")
+    def probsOf(nids:Seq[NodeId]):IndexedSeq[ProbDistr] = {
+      val idxMap = mutable.Map[Int, Int]()
+      val valIndices = vs.valReverseIndicesOf(nids)
+      nids.indices.foreach { vidx =>
+        idxMap += vidx -> nodes.indexOf(nids(vidx))
+      }
 
-      val nVals = vs.vm(nid)
-      (0 until nVals).map { nVal =>
-        val valIndices1 =  remValueIndices.slice(0, nidx).toIndexedSeq
-        val valIndices2 = remValueIndices.slice(nidx+1, remValueIndices.length)
-        val valIndices = valIndices1 ++ IndexedSeq(nVal) ++ valIndices2
-        prob(valIndices.toArray)
-      }.toArray
+      val remNodeIndices = nodes.indices.filter(idx => !nids.contains(nodes(idx)))
+
+      val remNodes = remNodeIndices.map(nodes)
+      var i = nids.size
+      remNodes.foreach { remNode =>
+        idxMap += i -> nodes.indexOf(remNode)
+        i += 1
+      }
+      val indiceMap = idxMap.toList.sortBy(_._2).map(_._1).toIndexedSeq
+      val remValIndices = vs.valReverseIndicesOf(remNodes)
+
+      valIndices.map { valIndex =>
+        val ps = remValIndices.map { remValIdx =>
+          val vals = valIndex ++ remValIdx
+          val transVals = indiceMap.map(vals)
+          prob(transVals)
+        }
+
+        ProbDistr(remNodes, vs, ps)
+      }
+//      val nidx = nodes.indexOf(nid)
+//      if (nidx < 0) throw new IllegalArgumentException(s"Unknown node id [$nid]")
+//
+//      val nVals = vs.vm(nid)
+//      (0 until nVals).map { nVal =>
+//        val valIndices1 =  remValueIndices.slice(0, nidx).toIndexedSeq
+//        val valIndices2 = remValueIndices.slice(nidx+1, remValueIndices.length)
+//        val valIndices = valIndices1 ++ IndexedSeq(nVal) ++ valIndices2
+//        prob(valIndices)
+//      }
     }
 
 //    def probsOf(nids:Array[NodeId]):Array[Array[Double]] = {
@@ -70,10 +119,10 @@ object Bayne {
 //    }
   }
 
-  case class Potential(n:NodeId, pars:Array[NodeId], vs:NodeValueSets, probs:Array[Double]) {
-    private val _prob = ProbDistr(Array(n) ++ pars, vs, probs)
-    def prob(nValueIdx:Int, parsValueIndices:Array[Int]):Double = {
-      _prob.prob(Array(nValueIdx) ++ parsValueIndices)
+  case class Potential(n:NodeId, pars:IndexedSeq[NodeId], vs:NodeValueSets, probs:IndexedSeq[Double]) {
+    private val _prob = ProbDistr(n +: pars, vs, probs)
+    def prob(nValueIdx:Int, parsValueIndices:IndexedSeq[Int]):Double = {
+      _prob.prob(nValueIdx +: parsValueIndices)
     }
   }
 
