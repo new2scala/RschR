@@ -40,6 +40,24 @@ object Bayne {
 
   private val tolerance = 1e-8
 
+  //// prob example, note the "least important bit" is the leftmost one
+  //   A  B  C  D  P(A|B,C,D)
+  //   0  0  0  0       0.12
+  //   1  0  0  0       0.88
+  //   0  1  0  0       0.20
+  //   1  1  0  0       0.80
+  //   0  0  1  0       0.28
+  //   1  0  1  0       0.72
+  //   0  1  1  0       0.36
+  //   1  1  1  0       0.64
+  //   0  0  0  1       0.16
+  //   1  0  0  1       0.84
+  //   0  1  0  1       0.24
+  //   1  1  0  1       0.76
+  //   0  0  1  1       0.32
+  //   1  0  1  1       0.68
+  //   0  1  1  1       0.40
+  //   1  1  1  1       0.60
   case class ProbDistr(nodes:IndexedSeq[NodeId], vs:NodeValueSets, probs:IndexedSeq[Double]) {
 
     override def hashCode(): Int = nodes.hashCode() + vs.hashCode() + probs.hashCode()

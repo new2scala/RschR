@@ -193,14 +193,221 @@ class ProbDistrTests extends FlatSpec with Matchers with TableDrivenPropertyChec
     )
   )
 
+  private val vs1 = NodeValueSets(
+    Map(1L -> 2, 2L -> 3, 3L -> 2)
+  )
+  ////
+  //   A  B  C   P(A|B,C)
+  //   0  0  0     0.12
+  //   1  0  0     0.88
+  //   0  1  0     0.20
+  //   1  1  0     0.80
+  //   0  2  0     0.28
+  //   1  2  0     0.72
+  //   0  0  1     0.36
+  //   1  0  1     0.64
+  //   0  1  1     0.16
+  //   1  1  1     0.84
+  //   0  2  1     0.24
+  //   1  2  1     0.76
+  //
+  private val distr1 = ProbDistr(
+    1L to 3L, vs1,
+    IndexedSeq(
+      0.12, 0.88, 0.20, 0.80, 0.28, 0.72,
+      0.36, 0.64, 0.16, 0.84, 0.24, 0.76
+    )
+  )
+
+
   private val probDistrTestData1 = Table(
     ("distrIn", "ofNodes", "distrsOut"),
+    (
+      distr1,
+      Seq(3L, 1L),
+      IndexedSeq(
+        ProbDistr(
+          IndexedSeq(2L), vs1,
+          IndexedSeq(
+            0.12, 0.20, 0.28
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(2L), vs1,
+          IndexedSeq(
+            0.36, 0.16, 0.24
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(2L), vs1,
+          IndexedSeq(
+            0.88, 0.80, 0.72
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(2L), vs1,
+          IndexedSeq(
+            0.64, 0.84, 0.76
+          )
+        )
+      )
+    ),
+    (
+      distr1,
+      Seq(2L, 3L),
+      IndexedSeq(
+        ProbDistr(
+          IndexedSeq(1L), vs1,
+          IndexedSeq(
+            0.12, 0.88
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L), vs1,
+          IndexedSeq(
+            0.20, 0.80
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L), vs1,
+          IndexedSeq(
+            0.28, 0.72
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L), vs1,
+          IndexedSeq(
+            0.36, 0.64
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L), vs1,
+          IndexedSeq(
+            0.16, 0.84
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L), vs1,
+          IndexedSeq(
+            0.24, 0.76
+          )
+        )
+      )
+    ),
+    (
+      distr1,
+      Seq(3L),
+      IndexedSeq(
+        ProbDistr(
+          IndexedSeq(1L, 2L), vs1,
+          IndexedSeq(
+            0.12, 0.88, 0.20, 0.80, 0.28, 0.72
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L, 2L), vs1,
+          IndexedSeq(
+            0.36, 0.64, 0.16, 0.84, 0.24, 0.76
+          )
+        )
+      )
+    ),
     (
       distr0,
       Seq(4L),
       IndexedSeq(
         distr40,
         distr41
+      )
+    ),
+    (
+      distr0,
+      Seq(2L, 4L),
+      IndexedSeq(
+        ProbDistr(
+          IndexedSeq(1L, 3L), vs0,
+          IndexedSeq(
+            0.12, 0.88, 0.28, 0.72
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L, 3L), vs0,
+          IndexedSeq(
+            0.20, 0.80, 0.36, 0.64
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L, 3L), vs0,
+          IndexedSeq(
+            0.16, 0.84, 0.32, 0.68
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L, 3L), vs0,
+          IndexedSeq(
+            0.24, 0.76, 0.40, 0.60
+          )
+        )
+      )
+    ),
+    (
+      distr0,
+      Seq(4L, 2L),
+      IndexedSeq(
+        ProbDistr(
+          IndexedSeq(1L, 3L), vs0,
+          IndexedSeq(
+            0.12, 0.88, 0.28, 0.72
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L, 3L), vs0,
+          IndexedSeq(
+            0.16, 0.84, 0.32, 0.68
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L, 3L), vs0,
+          IndexedSeq(
+            0.20, 0.80, 0.36, 0.64
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L, 3L), vs0,
+          IndexedSeq(
+            0.24, 0.76, 0.40, 0.60
+          )
+        )
+      )
+    ),
+    (
+      distr0,
+      Seq(3L, 4L),
+      IndexedSeq(
+        ProbDistr(
+          1L to 2L, vs0,
+          IndexedSeq(
+            0.12, 0.88, 0.20, 0.80
+          )
+        ),
+        ProbDistr(
+          1L to 2L, vs0,
+          IndexedSeq(
+            0.28, 0.72, 0.36, 0.64
+          )
+        ),
+        ProbDistr(
+          1L to 2L, vs0,
+          IndexedSeq(
+            0.16, 0.84, 0.24, 0.76
+          )
+        ),
+        ProbDistr(
+          1L to 2L, vs0,
+          IndexedSeq(
+            0.32, 0.68, 0.40, 0.60
+          )
+        )
       )
     )
   )
