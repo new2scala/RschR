@@ -467,10 +467,148 @@ class ProbDistrTests extends FlatSpec with Matchers with TableDrivenPropertyChec
     )
   )
 
-  "mul tests" should "pass" in {
+  "mul_nc tests" should "pass" in {
     forAll(mulTestData) { (pd1, pd2, resultPd) =>
       val npd = pd1.mul_nc(pd2)
       npd shouldBe resultPd
+    }
+  }
+
+  //   A  B  C   P(A|B,C)
+  //   0  0  0     0.12
+  //   1  0  0     0.88
+  //   0  1  0     0.20
+  //   1  1  0     0.80
+  //   0  2  0     0.28
+  //   1  2  0     0.72
+  //   0  0  1     0.36
+  //   1  0  1     0.64
+  //   0  1  1     0.16
+  //   1  1  1     0.84
+  //   0  2  1     0.24
+  //   1  2  1     0.76
+  private val vs11 = NodeValueSets(
+    Map(1L -> 2, 2L -> 3, 3L -> 2, 4L -> 2)
+  )
+  private val distr11 = ProbDistr(
+    1L to 3L, vs11,
+    IndexedSeq(
+      0.12, 0.88, 0.20, 0.80, 0.28, 0.72,
+      0.36, 0.64, 0.16, 0.84, 0.24, 0.76
+    )
+  )
+
+  private val mulHcTestData = Table(
+    ("pd1", "pd2", "commonNodes", "resultPds"),
+    (
+      distr11,
+      ProbDistr(
+        IndexedSeq(1L, 3L, 4L), vs11,
+        IndexedSeq(
+          0.1, 0.9, 0.2, 0.8, 0.3, 0.7, 0.4, 0.6
+        )
+      ),
+      IndexedSeq(1L, 3L),
+      IndexedSeq(
+        ProbDistr(
+          IndexedSeq(2L, 4L), vs11,
+          IndexedSeq(
+            0.12*0.1, 0.20*0.1, 0.28*0.1,
+            0.12*0.3, 0.20*0.3, 0.28*0.3
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(2L, 4L), vs11,
+          IndexedSeq(
+            0.88*0.9, 0.80*0.9, 0.72*0.9,
+            0.88*0.7, 0.80*0.7, 0.72*0.7
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(2L, 4L), vs11,
+          IndexedSeq(
+            0.36*0.2, 0.16*0.2, 0.24*0.2,
+            0.36*0.4, 0.16*0.4, 0.24*0.4
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(2L, 4L), vs11,
+          IndexedSeq(
+            0.64*0.8, 0.84*0.8, 0.76*0.8,
+            0.64*0.6, 0.84*0.6, 0.76*0.6
+          )
+        )
+      )
+    ),
+    (
+      distr11,
+      ProbDistr(
+        IndexedSeq(2L, 4L), vs11,
+        IndexedSeq(
+          0.1, 0.4, 0.5, 0.6, 0.2, 0.2
+        )
+      ),
+      IndexedSeq(2L),
+      IndexedSeq(
+        ProbDistr(
+          IndexedSeq(1L, 3L, 4L), vs11,
+          IndexedSeq(
+            0.012, 0.088, 0.036, 0.064,
+            0.012*6, 0.088*6, 0.036*6, 0.064*6
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L, 3L, 4L), vs11,
+          IndexedSeq(
+            0.20*0.4, 0.80*0.4, 0.16*0.4, 0.84*0.4,
+            0.20*0.2, 0.80*0.2, 0.16*0.2, 0.84*0.2
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L, 3L, 4L), vs11,
+          IndexedSeq(
+            0.28*0.5, 0.72*0.5, 0.24*0.5, 0.76*0.5,
+            0.28*0.2, 0.72*0.2, 0.24*0.2, 0.76*0.2
+          )
+        )
+      )
+    ),
+    (
+      ProbDistr(
+        1L to 2L, vs0,
+        IndexedSeq(
+          0.12, 0.88, 0.20, 0.80
+        )
+      ),
+      ProbDistr(
+        IndexedSeq(2L, 3L), vs0,
+        IndexedSeq(
+          0.1, 0.9, 0.4, 0.6
+        )
+      ),
+      IndexedSeq(2L),
+      IndexedSeq(
+        ProbDistr(
+          IndexedSeq(1L, 3L), vs0,
+          IndexedSeq(
+            0.012, 0.088, 0.048, 0.352
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(1L, 3L), vs0,
+          IndexedSeq(
+            0.18, 0.72, 0.12, 0.48
+          )
+        )
+      )
+    )
+  )
+
+  "mul_hc tests" should "pass" in {
+    forAll(mulHcTestData) { (pd1, pd2, commonNodes, resultPd) =>
+      val (nodes, pds) = pd1.mul_hc(pd2)
+      nodes shouldBe commonNodes
+      pds shouldBe resultPd
     }
   }
 }
