@@ -113,18 +113,37 @@ object Bayne {
 
         ProbDistr(remNodes, vs, ps)
       }
-//      val nidx = nodes.indexOf(nid)
-//      if (nidx < 0) throw new IllegalArgumentException(s"Unknown node id [$nid]")
-//
-//      val nVals = vs.vm(nid)
-//      (0 until nVals).map { nVal =>
-//        val valIndices1 =  remValueIndices.slice(0, nidx).toIndexedSeq
-//        val valIndices2 = remValueIndices.slice(nidx+1, remValueIndices.length)
-//        val valIndices = valIndices1 ++ IndexedSeq(nVal) ++ valIndices2
-//        prob(valIndices)
-//      }
+
     }
 
+    def mul_nc(probDistr2:ProbDistr):ProbDistr = {
+      checkHasCommon(nodes, probDistr2.nodes, false)
+
+      val newNodes = nodes ++ probDistr2.nodes
+
+      val newProbs = new Array[Double](probs.size*probDistr2.probs.size)
+      probDistr2.probs.indices.foreach { i =>
+        probs.indices.foreach { j =>
+          newProbs(i*probs.size + j) = probs(j)*probDistr2.probs(i)
+        }
+      }
+      ProbDistr(newNodes, vs, newProbs)
+    }
+
+    def mul_hc(probDistr2:ProbDistr):(IndexedSeq[NodeId], IndexedSeq[ProbDistr]) = {
+      //checkHasCommon(nodes, probDistr2.nodes, true)
+
+      val commonNodes = nodes.toSet.intersect(probDistr2.nodes.toSet)
+        .toIndexedSeq.sorted
+
+      val probs1 = probsOf(commonNodes)
+      val probs2 = probDistr2.probsOf(commonNodes)
+
+      assert(probs1.size == probs2.size)
+
+      val res = probs1.indices.map(idx => probs1(idx).mul_nc(probs2(idx)))
+      commonNodes -> res
+    }
 //    def probsOf(nids:Array[NodeId]):Array[Array[Double]] = {
 ////      val nidx = nodes.indexOf(nid)
 ////      if (nidx < 0) throw new IllegalArgumentException(s"Unknown node id [$nid]")
@@ -135,6 +154,16 @@ object Bayne {
 //      val remIdxs = nodes.indices.filter(x => !nodeIdxs.contains(x)).map(nodes)
 //
 //    }
+  }
+
+  private def checkHasCommon(
+    nodes1:IndexedSeq[NodeId],
+    nodes2:IndexedSeq[NodeId],
+    requireTrue:Boolean
+  ):Unit = {
+    val commonNodes = nodes1.toSet.intersect(nodes2.toSet)
+    if (commonNodes.nonEmpty != requireTrue)
+      throw new IllegalArgumentException(s"Requires Common: $requireTrue, but $nodes1 vs $nodes2")
   }
 
   case class Potential(n:NodeId, pars:IndexedSeq[NodeId], vs:NodeValueSets, probs:IndexedSeq[Double]) {

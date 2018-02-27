@@ -418,4 +418,59 @@ class ProbDistrTests extends FlatSpec with Matchers with TableDrivenPropertyChec
       outDistr shouldBe distrsOut
     }
   }
+
+  private val mulTestData = Table(
+    ("pd1", "pd2", "resultPd"),
+    (
+      ProbDistr(
+        1L to 2L, vs0,
+        IndexedSeq(
+          0.12, 0.88, 0.20, 0.80
+        )
+      ),
+      ProbDistr(
+        IndexedSeq(3L), vs0,
+        IndexedSeq(
+          0.1, 0.9
+        )
+      ),
+      ProbDistr(
+        1L to 3L, vs0,
+        IndexedSeq(
+          0.012, 0.088, 0.020, 0.080,
+          0.108, 0.792, 0.18, 0.72
+        )
+      )
+    ),
+    (
+      ProbDistr(
+        1L to 2L, vs0,
+        IndexedSeq(
+          0.12, 0.88, 0.20, 0.80
+        )
+      ),
+      ProbDistr(
+        IndexedSeq(3L, 4L), vs0,
+        IndexedSeq(
+          0.1, 0.9, 0.4, 0.6
+        )
+      ),
+      ProbDistr(
+        1L to 4L, vs0,
+        IndexedSeq(
+          0.012, 0.088, 0.020, 0.080,
+          0.108, 0.792, 0.18, 0.72,
+          0.048, 0.352, 0.08, 0.32,
+          0.072, 0.528, 0.12, 0.48
+        )
+      )
+    )
+  )
+
+  "mul tests" should "pass" in {
+    forAll(mulTestData) { (pd1, pd2, resultPd) =>
+      val npd = pd1.mul_nc(pd2)
+      npd shouldBe resultPd
+    }
+  }
 }
