@@ -40,6 +40,8 @@ object Bayne {
 
   private val tolerance = 1e-8
 
+  private val EmptyNodeIds = IndexedSeq[NodeId]()
+
   //// prob example, note the "least important bit" is the leftmost one
   //   A  B  C  D  P(A|B,C,D)
   //   0  0  0  0       0.12
@@ -116,8 +118,21 @@ object Bayne {
 
     }
 
-    def mul_nc(probDistr2:ProbDistr):ProbDistr = {
-      checkHasCommon(nodes, probDistr2.nodes, false)
+    // used when this.nodes is a superset of pdLessNodes.nodes
+    private[rschr] def mul_merge(pdLessNodes:ProbDistr):IndexedSeq[ProbDistr] = {
+      val commonNodes = pdLessNodes.nodes // because it's a subset of this.nodes
+
+      val thisPds = probsOf(commonNodes)
+      assert(pdLessNodes.probs.size == thisPds.size)
+
+      thisPds.indices.map { idx =>
+        val newProbs = thisPds(idx).probs.map(_*pdLessNodes.probs(idx))
+        ProbDistr(thisPds(idx).nodes, vs, newProbs)
+      }
+    }
+
+    private[rschr] def mul_nc(probDistr2:ProbDistr):ProbDistr = {
+      //checkHasCommon(nodes, probDistr2.nodes, false)
 
       val newNodes = nodes ++ probDistr2.nodes
 
@@ -130,30 +145,55 @@ object Bayne {
       ProbDistr(newNodes, vs, newProbs)
     }
 
-    def mul_hc(probDistr2:ProbDistr):(IndexedSeq[NodeId], IndexedSeq[ProbDistr]) = {
+    private[rschr] def mul_hc(probDistr2:ProbDistr):(IndexedSeq[NodeId], IndexedSeq[ProbDistr]) = {
       //checkHasCommon(nodes, probDistr2.nodes, true)
 
       val commonNodes = nodes.toSet.intersect(probDistr2.nodes.toSet)
         .toIndexedSeq.sorted
 
-      val probs1 = probsOf(commonNodes)
-      val probs2 = probDistr2.probsOf(commonNodes)
+      val hasExtraNodes =
+        (nodes.size > commonNodes.size, probDistr2.nodes.size > commonNodes.size)
 
-      assert(probs1.size == probs2.size)
+      val distrs = hasExtraNodes match {
+        case (false, false) => throw new IllegalArgumentException("Not implemented")
+        case (true, false) => mul_merge(probDistr2)
+        case (false, true) => probDistr2.mul_merge(this)
+        case (true, true) => {
+          val probs1 = probsOf(commonNodes)
+          val probs2 = probDistr2.probsOf(commonNodes)
 
-      val res = probs1.indices.map(idx => probs1(idx).mul_nc(probs2(idx)))
-      commonNodes -> res
+          assert(probs1.size == probs2.size)
+
+          val res = probs1.indices.map(idx => probs1(idx).mul_nc(probs2(idx)))
+          res
+        }
+      }
+
+      commonNodes -> distrs
     }
-//    def probsOf(nids:Array[NodeId]):Array[Array[Double]] = {
-////      val nidx = nodes.indexOf(nid)
-////      if (nidx < 0) throw new IllegalArgumentException(s"Unknown node id [$nid]")
-//
-//      val nodeIdxs = nids.map(nodes.indexOf)
-//      if (nodeIdxs.contains(-1)) throw new IllegalArgumentException(s"Unknown node id found!")
-//
-//      val remIdxs = nodes.indices.filter(x => !nodeIdxs.contains(x)).map(nodes)
-//
-//    }
+
+    def mul(probDistr2:ProbDistr):ProbDistr = {
+      val commonNodes = nodes.toSet.intersect(probDistr2.nodes.toSet)
+
+      if (commonNodes.nonEmpty) {
+        val (commonNodes, distrs) = mul_hc(probDistr2)
+        val newNodes = distrs.head.nodes ++ commonNodes
+        val newProbs = distrs.flatMap(_.probs)
+        ProbDistr(newNodes, vs, newProbs)
+      }
+      else mul_nc(probDistr2)
+    }
+
+    def eliminate(nids:Set[NodeId]):ProbDistr = {
+      //val remNodeIds = nodes.filter(n => !nids.contains(n))
+      val remNodes = nodes.filter(n => !nids.contains(n))
+      //val nidSeq = nids.toIndexedSeq.sorted // order does not matter
+      val nProbs = probsOf(remNodes)
+
+      val newProbs = nProbs.map(_.probs.sum)
+      ProbDistr(remNodes, vs, newProbs)
+    }
+
   }
 
   private def checkHasCommon(
@@ -171,6 +211,9 @@ object Bayne {
     def prob(nValueIdx:Int, parsValueIndices:IndexedSeq[Int]):Double = {
       _prob.prob(nValueIdx +: parsValueIndices)
     }
+    def eliminate(nids:Set[NodeId]):ProbDistr = _prob.eliminate(nids)
+
+    def mul(pd:ProbDistr):ProbDistr = _prob.mul(pd)
   }
 
   def createBayNet(child2ParentsProbs:Iterable[ChildParentProbs], vm:Map[NodeId, Int]): BayNet = {

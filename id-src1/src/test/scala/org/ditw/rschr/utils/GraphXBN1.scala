@@ -2,7 +2,7 @@ package org.ditw.rschr.utils
 
 import org.apache.spark.graphx.{Edge, Graph}
 import org.ditw.rschr.Bayne
-import org.ditw.rschr.Bayne.{BayNet, Potential}
+import org.ditw.rschr.Bayne.{BayNet, NodeValueSets, Potential}
 
 /**
   * Created by dev on 2018-02-20.
@@ -39,23 +39,27 @@ object GraphXBN1 extends App {
 
   private val _arrayTodo = Array[Double]()
 
-//  def bnFromPotentials():BayNet = {
-//    val pots = Iterable(
-//      Potential(2, Array(1L), _arrayTodo),
-//      Potential(3, Array(1L), _arrayTodo),
-//      Potential(4, Array(2L), _arrayTodo),
-//      Potential(5, Array(2L, 3L), _arrayTodo),
-//      Potential(6, Array(3L), _arrayTodo)
-//    )
-//
-//    BayNet(pots)
-//  }
-//
-//  val bn = bnFromPotentials
-//  println("=== Bayesian Net ===")
-//  println(GraphUtils.traceGraph(bn.toGraph(spark)))
-//  println("=== Domain Graph ===")
-//  println(GraphUtils.traceGraph(bn.toDomainGraph(spark)))
+  private val vs = NodeValueSets(
+    (1L to 6L).map(nid => nid -> 2).toMap
+  )
+
+  def bnFromPotentials():BayNet = {
+    val pots = Iterable(
+      Potential(2, Array(1L), vs, _arrayTodo),
+      Potential(3, Array(1L), vs, _arrayTodo),
+      Potential(4, Array(2L), vs, _arrayTodo),
+      Potential(5, Array(2L, 3L), vs, _arrayTodo),
+      Potential(6, Array(3L), vs, _arrayTodo)
+    )
+
+    BayNet(pots)
+  }
+
+  val bn = bnFromPotentials()
+  println("=== Bayesian Net ===")
+  println(GraphUtils.traceGraph(bn.toGraph(spark)))
+  println("=== Domain Graph ===")
+  println(GraphUtils.traceGraph(bn.toDomainGraph(spark)))
 
   spark.stop()
 }

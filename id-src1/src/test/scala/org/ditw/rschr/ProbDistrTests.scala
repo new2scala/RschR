@@ -501,6 +501,64 @@ class ProbDistrTests extends FlatSpec with Matchers with TableDrivenPropertyChec
   private val mulHcTestData = Table(
     ("pd1", "pd2", "commonNodes", "resultPds"),
     (
+      ProbDistr(
+        IndexedSeq(2L, 3L), vs0,
+        IndexedSeq(
+          1.0, 1.0, 1.0, 1.0
+        )
+      ),
+      ProbDistr(
+        IndexedSeq(3L), vs0,
+        IndexedSeq(
+          1.0, 1.0
+        )
+      ),
+      IndexedSeq(3L),
+      IndexedSeq(
+        ProbDistr(
+          IndexedSeq(2L), vs0,
+          IndexedSeq(
+            1.0, 1.0
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(2L), vs0,
+          IndexedSeq(
+            1.0, 1.0
+          )
+        )
+      )
+    ),
+    (
+      ProbDistr(
+        IndexedSeq(3L), vs0,
+        IndexedSeq(
+          1.0, 1.0
+        )
+      ),
+      ProbDistr(
+        IndexedSeq(2L, 3L), vs0,
+        IndexedSeq(
+          1.0, 1.0, 1.0, 1.0
+        )
+      ),
+      IndexedSeq(3L),
+      IndexedSeq(
+        ProbDistr(
+          IndexedSeq(2L), vs0,
+          IndexedSeq(
+            1.0, 1.0
+          )
+        ),
+        ProbDistr(
+          IndexedSeq(2L), vs0,
+          IndexedSeq(
+            1.0, 1.0
+          )
+        )
+      )
+    ),
+    (
       distr11,
       ProbDistr(
         IndexedSeq(1L, 3L, 4L), vs11,
@@ -609,6 +667,97 @@ class ProbDistrTests extends FlatSpec with Matchers with TableDrivenPropertyChec
       val (nodes, pds) = pd1.mul_hc(pd2)
       nodes shouldBe commonNodes
       pds shouldBe resultPd
+    }
+  }
+
+
+  //   A  B  C   P(A|B,C)
+  //   0  0  0     0.12
+  //   1  0  0     0.88
+  //   0  1  0     0.20
+  //   1  1  0     0.80
+  //   0  2  0     0.28
+  //   1  2  0     0.72
+  //   0  0  1     0.36
+  //   1  0  1     0.64
+  //   0  1  1     0.16
+  //   1  1  1     0.84
+  //   0  2  1     0.24
+  //   1  2  1     0.76
+  private val vs2 = NodeValueSets(
+    Map(1L -> 2, 2L -> 3, 3L -> 2, 4L -> 2)
+  )
+  private val distr2 = ProbDistr(
+    1L to 3L, vs2,
+    IndexedSeq(
+      0.12, 0.88, 0.20, 0.80, 0.28, 0.72,
+      0.36, 0.64, 0.16, 0.84, 0.24, 0.76
+    )
+  )
+
+  private val eliminateTestData = Table(
+    ("pd", "nids2Eliminate", "resultPd"),
+    (
+      distr2,
+      Set(1L),
+      ProbDistr(
+        2L to 3L, vs2,
+        IndexedSeq(
+          1.0, 1.0,
+          1.0, 1.0,
+          1.0, 1.0
+        )
+      )
+    ),
+    (
+      distr2,
+      Set(2L),
+      ProbDistr(
+        IndexedSeq(1L, 3L), vs2,
+        IndexedSeq(
+          0.60, 2.40,
+          0.76, 2.24
+        )
+      )
+    ),
+    (
+      distr2,
+      Set(3L),
+      ProbDistr(
+        IndexedSeq(1L, 2L), vs2,
+        IndexedSeq(
+          0.48, 1.52,
+          0.36, 1.64,
+          0.52, 1.48
+        )
+      )
+    ),
+    (
+      distr2,
+      Set(1L, 2L),
+      ProbDistr(
+        IndexedSeq(3L), vs2,
+        IndexedSeq(
+          3.0, 3.0
+        )
+      )
+    ),
+    (
+      distr2,
+      Set(1L, 3L),
+      ProbDistr(
+        IndexedSeq(2L), vs2,
+        IndexedSeq(
+          2.0, 2.0, 2.0
+        )
+      )
+    )
+  )
+
+  "eliminate test" should "pass" in {
+    forAll(eliminateTestData) { (pd, nids2Eliminate, resultPd) =>
+      val rpd = pd.eliminate(nids2Eliminate)
+      rpd shouldBe resultPd
     }
   }
 }
