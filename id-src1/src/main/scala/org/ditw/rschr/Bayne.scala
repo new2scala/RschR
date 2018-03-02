@@ -214,6 +214,8 @@ object Bayne {
     def eliminate(nids:Set[NodeId]):ProbDistr = _prob.eliminate(nids)
 
     def mul(pd:ProbDistr):ProbDistr = _prob.mul(pd)
+
+    def prob:ProbDistr = _prob
   }
 
   def createBayNet(child2ParentsProbs:Iterable[ChildParentProbs], vm:Map[NodeId, Int]): BayNet = {

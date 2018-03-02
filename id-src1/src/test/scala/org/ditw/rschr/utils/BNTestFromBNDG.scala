@@ -64,11 +64,11 @@ object BNTestFromBNDG extends App {
   //   A3 A1  P(A3|A1)
   //    0  0    0.32
   //    1  0    0.68
-  //    0  1    0.40
-  //    1  1    0.40
+  //    0  1    0.65
+  //    1  1    0.35
   val pot31 = Potential(
     3L, IndexedSeq(1L), vs1,
-    IndexedSeq(0.32, 0.68, 0.40, 0.40)
+    IndexedSeq(0.32, 0.68, 0.65, 0.35)
   )
   //// Phi_523
   //   A5 A2 A3  P(A5|A2,A3)
@@ -91,6 +91,8 @@ object BNTestFromBNDG extends App {
     )
   )
 
+  val p1 = ProbDistr(IndexedSeq(1L), vs1, IndexedSeq(0.45, 0.55))
+
   val pot63e6 = pot63.eliminate(Set(6L))
   assert(pot63e6 == ProbDistr(IndexedSeq(3L), vs1, IndexedSeq(1.0, 1.0)))
   println("φ6': eliminating A6 from φ6 - P(A6|A3) ... checked")
@@ -102,6 +104,42 @@ object BNTestFromBNDG extends App {
   val pot523_e5_63_e6 = pot523e5.mul(pot63e6)
   assert(pot523_e5_63_e6 == ProbDistr(IndexedSeq(2L, 3L), vs1, IndexedSeq(1.0, 1.0, 1.0, 1.0)))
   println("φ6' x φ5': ... checked")
+
+  val pd_pre_e653 = pot31.mul(pot523e5.mul(pot63e6))
+  val pd_e653 = pd_pre_e653.eliminate(Set(3L))
+  assert(pd_e653 == ProbDistr(IndexedSeq(1L, 2L), vs1, IndexedSeq(1.0, 1.0, 1.0, 1.0)))
+  println("φ3' = φ6' x φ5' x φ3: ... checked")
+  // all 1's so far, because A3, A5 and A6 are so-called barren nodes BDNG page 112:
+  //   a node A is barren if neither A or any of A's descendants have received evidence.
+  //   The conditional prob attached to a barren node has an impact only on descendant nodes.
+  //   (not anscestral nodes, or nodes outside of the sub-graph)
+
+  val pd_pre_e6532 = pot21.mul(pot42.prob).mul(pd_e653)
+  val pd_e6532 = pd_pre_e6532.eliminate(Set(2L))
+  assert(
+    pd_e6532 == ProbDistr(IndexedSeq(4L, 1L), vs1,
+      IndexedSeq(
+        0.28*0.16 + 0.36*0.84,
+        0.72*0.16 + 0.64*0.84,
+        0.28*0.24 + 0.36*0.76,
+        0.72*0.24 + 0.64*0.76
+      )
+    )
+  )
+  println("φ2' = φ6' x φ5' x φ3': ... checked")
+
+  val pd_pre_e65321 = pd_e6532.mul(p1)
+  val pd_e65321 = pd_pre_e65321.eliminate(Set(1L))
+  assert(
+    pd_e65321 == ProbDistr(IndexedSeq(4L), vs1,
+      IndexedSeq(
+        (0.28*0.16 + 0.36*0.84)*0.45 + (0.28*0.24 + 0.36*0.76)*0.55,
+        (0.72*0.16 + 0.64*0.84)*0.45 + (0.72*0.24 + 0.64*0.76)*0.55
+      )
+    )
+  )
+  println("p4 = φ2' x p1: ... checked")
+  println(s"\t${pd_e65321.probs}")
 
   //val pot523_e5_63_e6 = pot523.
 }
