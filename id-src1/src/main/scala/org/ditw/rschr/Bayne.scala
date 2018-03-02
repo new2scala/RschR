@@ -216,6 +216,21 @@ object Bayne {
     def mul(pd:ProbDistr):ProbDistr = _prob.mul(pd)
 
     def prob:ProbDistr = _prob
+
+//    def applyEvidence(evd:IndexedSeq[Int]):ProbDistr = {
+//      val valIndices = vs.valIndexOf(n).map(_ +: evd)
+//      val newProbs = valIndices.map(_prob.prob)
+//      val newNodes = IndexedSeq(n)
+//      ProbDistr(newNodes, vs, newProbs)
+//    }
+
+    def applyEvidence(nVal:Int):ProbDistr = {
+      val parIndices = vs.valReverseIndicesOf(pars)
+      val valIndices = parIndices.map(nVal +: _)
+      val newProbs = valIndices.map(_prob.prob)
+      val newNodes = pars
+      ProbDistr(newNodes, vs, newProbs)
+    }
   }
 
   def createBayNet(child2ParentsProbs:Iterable[ChildParentProbs], vm:Map[NodeId, Int]): BayNet = {

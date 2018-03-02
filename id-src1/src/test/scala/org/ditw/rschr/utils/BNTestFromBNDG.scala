@@ -135,11 +135,76 @@ object BNTestFromBNDG extends App {
       IndexedSeq(
         (0.28*0.16 + 0.36*0.84)*0.45 + (0.28*0.24 + 0.36*0.76)*0.55,
         (0.72*0.16 + 0.64*0.84)*0.45 + (0.72*0.24 + 0.64*0.76)*0.55
-      )
+      ) // (0.34368, 0.65632)
     )
   )
   println("p4 = φ2' x p1: ... checked")
   println(s"\t${pd_e65321.probs}")
 
   //val pot523_e5_63_e6 = pot523.
+  println("===========================================")
+  println("Putting all together ...")
+  val pd_all =
+    pot31.mul(
+      pot63
+        .eliminate(Set(6L))
+        .mul(pot523.eliminate(Set(5L)))
+    )
+    .eliminate(Set(3L))
+    .mul(
+      pot21.mul(pot42.prob)
+    )
+    .eliminate(Set(2L))
+    .mul(p1)
+    .eliminate(Set(1L))
+  assert(
+    pd_all == ProbDistr(IndexedSeq(4L), vs1,
+      IndexedSeq(0.34368, 0.65632) // (0.34368, 0.65632)
+    )
+  )
+  println("p4 = [all ops] ... checked")
+
+
+  //// tests with evidence
+  // with evidence A6=0
+  val pd_evd60 = pot63.applyEvidence(0)
+  val pd_evd61 = pot63.applyEvidence(1)
+  assert(
+    pd_evd60 == ProbDistr(IndexedSeq(3L), vs1,
+      IndexedSeq(0.12, 0.20)
+    )
+  )
+  assert(
+    pd_evd61 == ProbDistr(IndexedSeq(3L), vs1,
+      IndexedSeq(0.88, 0.80)
+    )
+  )
+  println("apply evidence A6=0 ... checked")
+
+  println("Apply evidence A6=0 in calculating P(A4) ...")
+  val pd_all_evd60 =
+    pot31.mul(
+      pd_evd60.mul(pot523.eliminate(Set(5L)))
+    )
+    .eliminate(Set(3L))
+    .mul(
+      pot21.mul(pot42.prob)
+    )
+    .eliminate(Set(2L))
+    .mul(p1)
+    .eliminate(Set(1L))
+  println(s"\t${pd_all_evd60.probs}")
+
+  val pd_all_evd61 =
+    pot31.mul(
+      pd_evd61.mul(pot523.eliminate(Set(5L)))
+    )
+    .eliminate(Set(3L))
+    .mul(
+      pot21.mul(pot42.prob)
+    )
+    .eliminate(Set(2L))
+    .mul(p1)
+    .eliminate(Set(1L))
+  println(s"\t${pd_all_evd61.probs}")
 }
