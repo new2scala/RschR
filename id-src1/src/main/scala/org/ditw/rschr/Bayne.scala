@@ -62,6 +62,14 @@ object Bayne {
   //   1  1  1  1       0.60
   case class ProbDistr(nodes:IndexedSeq[NodeId], vs:NodeValueSets, probs:IndexedSeq[Double]) {
 
+    def traceProbs:String = {
+      probs.map(p => f"$p%.4f").mkString("[", ",", "]")
+    }
+    def traceProbsNorm:String = {
+      val max = probs.max
+      f"$max%.4f x " + probs.map(p => f"${p/max}%.4f").mkString("[", ",", "]")
+    }
+
     override def hashCode(): Int = nodes.hashCode() + vs.hashCode() + probs.hashCode()
 
     override def equals(obj: scala.Any): Boolean = {
@@ -145,6 +153,17 @@ object Bayne {
       ProbDistr(newNodes, vs, newProbs)
     }
 
+    private def mul_sameVars(probDistr2:ProbDistr):IndexedSeq[ProbDistr] = {
+      val vals = vs.valReverseIndicesOf(nodes)
+      var idx = 0
+      val newProbs = vals.map { v =>
+        val upd = probDistr2.prob(v)*probs(idx)
+        idx = idx+1
+        upd
+      }
+      IndexedSeq(ProbDistr(nodes, vs, newProbs))
+    }
+
     private[rschr] def mul_hc(probDistr2:ProbDistr):(IndexedSeq[NodeId], IndexedSeq[ProbDistr]) = {
       //checkHasCommon(nodes, probDistr2.nodes, true)
 
@@ -155,7 +174,9 @@ object Bayne {
         (nodes.size > commonNodes.size, probDistr2.nodes.size > commonNodes.size)
 
       val distrs = hasExtraNodes match {
-        case (false, false) => throw new IllegalArgumentException("Not implemented")
+        case (false, false) =>
+          // no extra commonNodes
+          return IndexedSeq() -> mul_sameVars(probDistr2) //throw new IllegalArgumentException("Not implemented")
         case (true, false) => mul_merge(probDistr2)
         case (false, true) => probDistr2.mul_merge(this)
         case (true, true) => {

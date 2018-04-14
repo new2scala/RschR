@@ -157,11 +157,10 @@ object BNTestFromBNDG extends App {
     .eliminate(Set(2L))
     .mul(p1)
     .eliminate(Set(1L))
-  assert(
-    pd_all == ProbDistr(IndexedSeq(4L), vs1,
-      IndexedSeq(0.34368, 0.65632) // (0.34368, 0.65632)
-    )
+  val P4_0 = ProbDistr(IndexedSeq(4L), vs1,
+    IndexedSeq(0.34368, 0.65632) // (0.34368, 0.65632)
   )
+  assert(pd_all == P4_0)
   println("p4 = [all ops] ... checked")
 
 
@@ -193,7 +192,7 @@ object BNTestFromBNDG extends App {
     .eliminate(Set(2L))
     .mul(p1)
     .eliminate(Set(1L))
-  println(s"\t${pd_all_evd60.probs}")
+  println(s"\t${pd_all_evd60.traceProbsNorm}")
 
   val pd_all_evd61 =
     pot31.mul(
@@ -206,5 +205,144 @@ object BNTestFromBNDG extends App {
     .eliminate(Set(2L))
     .mul(p1)
     .eliminate(Set(1L))
-  println(s"\t${pd_all_evd61.probs}")
+  println(s"\t${pd_all_evd61.traceProbsNorm}")
+
+  //// tests with evidence
+  // with evidence A5=0
+  val pd_evd50 = pot523.applyEvidence(0)
+  val pd_evd51 = pot523.applyEvidence(1)
+  assert(
+    pd_evd50 == ProbDistr(IndexedSeq(2L, 3L), vs1,
+      IndexedSeq(0.1, 0.3, 0.15, 0.25)
+    )
+  )
+  assert(
+    pd_evd51 == ProbDistr(IndexedSeq(2L, 3L), vs1,
+      IndexedSeq(0.9, 0.7, 0.85, 0.75)
+    )
+  )
+  println("apply evidence A5=0 ... checked")
+  println("Apply evidence A5=0 in calculating P(A4) ...")
+  val pd_all_evd50 =
+    pot31.mul(
+      pot63.eliminate(Set(6L)).mul(pd_evd50)
+    )
+      .eliminate(Set(3L))
+      .mul(
+        pot21.mul(pot42.prob)
+      )
+      .eliminate(Set(2L))
+      .mul(p1)
+      .eliminate(Set(1L))
+  println(s"\t${pd_all_evd50.traceProbsNorm}")
+
+  val pd_all_evd51 =
+    pot31.mul(
+      pot63.eliminate(Set(6L)).mul(pd_evd51)
+    )
+      .eliminate(Set(3L))
+      .mul(
+        pot21.mul(pot42.prob)
+      )
+      .eliminate(Set(2L))
+      .mul(p1)
+      .eliminate(Set(1L))
+  println(s"\t${pd_all_evd51.traceProbsNorm}")
+
+  println("Apply evidence A5=0 & A6=0 in calculating P(A4) ...")
+  val pd_all_evd5060 =
+    pot31.mul(
+      pd_evd60.mul(pd_evd50)
+    )
+      .eliminate(Set(3L))
+      .mul(
+        pot21.mul(pot42.prob)
+      )
+      .eliminate(Set(2L))
+      .mul(p1)
+      .eliminate(Set(1L))
+  println(s"\t${pd_all_evd5060.traceProbs}")
+  val pd_all_evd5160 =
+    pot31.mul(
+      pd_evd60.mul(pd_evd51)
+    )
+      .eliminate(Set(3L))
+      .mul(
+        pot21.mul(pot42.prob)
+      )
+      .eliminate(Set(2L))
+      .mul(p1)
+      .eliminate(Set(1L))
+  println(s"\t${pd_all_evd5160.traceProbs}")
+  val pd_all_evd5161 =
+    pot31.mul(
+      pd_evd61.mul(pd_evd51)
+    )
+      .eliminate(Set(3L))
+      .mul(
+        pot21.mul(pot42.prob)
+      )
+      .eliminate(Set(2L))
+      .mul(p1)
+      .eliminate(Set(1L))
+  println(s"\t${pd_all_evd5161.traceProbs}")
+  val pd_all_evd5061 =
+    pot31.mul(
+      pd_evd61.mul(pd_evd50)
+    )
+      .eliminate(Set(3L))
+      .mul(
+        pot21.mul(pot42.prob)
+      )
+      .eliminate(Set(2L))
+      .mul(p1)
+      .eliminate(Set(1L))
+  println(s"\t${pd_all_evd5061.traceProbs}")
+
+  //  BNDG page 126:
+  //   V6: A2, A4     --> S4: A2 ---\
+  //   V2: A2, A3, A5 --> S2: A2, A3 -> V4: A1, A2, A3
+  //   V1: A3, A6     --> S1: A3 ---/
+  // collecting evidence to V6 for A4
+  def collectEvd2A4(pV1:ProbDistr, pV2:ProbDistr):ProbDistr = {
+    //   V6 <- ψ1 = φ6.elim(A6)
+    val psi1 = pV1 //p63.eliminate(Set(6L))
+    //   V6 <- ψ2 = φ5.elim(A5)
+    val psi2 = pV2 //p523.eliminate(Set(5L))
+    //   V6 <- ψ^4 = Φ4.elim(A1,A3), where Φ4 = ψ1,ψ2,φ1,φ2,φ3
+    val _psi4u = psi1.mul(psi2).mul(pot31.prob).eliminate(Set(3L))
+    println(s"\t${_psi4u.traceProbs}")
+    val psi4u = _psi4u.mul(pot21.prob).mul(p1).eliminate(Set(1L))
+    val _p4 = pot42.mul(psi4u).eliminate(Set(2L))
+    println(s"\t${_p4.traceProbs}")
+    _p4
+  }
+
+  println("collecting evidence to V6 for A4:")
+  val p4a = collectEvd2A4(
+    pot63.eliminate(Set(6L)),
+    pot523.eliminate(Set(5L))
+  )
+  assert(p4a == P4_0)
+  println("With evidence A6 == 0")
+  val p4b = collectEvd2A4(
+    pot63.applyEvidence(0),
+    pot523.eliminate(Set(5L))
+  )
+  println("With evidence A6 == 1")
+  val p4c = collectEvd2A4(
+    pot63.applyEvidence(1),
+    pot523.eliminate(Set(5L))
+  )
+  println("With evidence A5 == 0")
+  val p4d = collectEvd2A4(
+    pot63.eliminate(Set(6L)),
+    pot523.applyEvidence(0)
+  )
+  println("With evidence A5 == 1")
+  val p4e = collectEvd2A4(
+    pot63.eliminate(Set(6L)),
+    pot523.applyEvidence(1)
+  )
+  //assert(p4a == P4_0)
 }
