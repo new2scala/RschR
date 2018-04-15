@@ -344,5 +344,101 @@ object BNTestFromBNDG extends App {
     pot63.eliminate(Set(6L)),
     pot523.applyEvidence(1)
   )
+
+  def collectEvd2A6(pV6:ProbDistr, pV2:ProbDistr):ProbDistr = {
+    val psi4 = pV6 //p63.eliminate(Set(6L))
+    val psi2 = pV2 //p523.eliminate(Set(5L))
+    val _psi1u = pot31.mul(p1).mul(pot21.prob).eliminate(Set(1L))
+    println(s"\t${_psi1u.traceProbs}")
+    val psi1u = psi4.mul(_psi1u).mul(psi2).eliminate(Set(2L))
+    val _p1 = pot63.mul(psi1u).eliminate(Set(3L))
+    println(s"\t${_p1.traceProbs}")
+    _p1
+  }
+
+  println("collecting evidence to V1 for A6:")
+  val p6a = collectEvd2A6(
+    pot42.eliminate(Set(4L)),
+    pot523.eliminate(Set(5L))
+  )
+  println("With evidence A5 == 0")
+  val p6b = collectEvd2A6(
+    pot42.eliminate(Set(4L)),
+    pot523.applyEvidence(0)
+  )
+  println("With evidence A5 == 1")
+  val p6c = collectEvd2A6(
+    pot42.eliminate(Set(4L)),
+    pot523.applyEvidence(1)
+  )
   //assert(p4a == P4_0)
+
+  import collection.mutable
+  def fullPropogationFromAndToA6(psi1:ProbDistr, psi2:ProbDistr):Map[String, ProbDistr] = {
+    println("fullPropogationFromAndToA6")
+    val r = mutable.Map[String, ProbDistr]()
+    //   V6 <- ψ^4 = Φ4.elim(A1,A3), where Φ4 = ψ1,ψ2,φ1,φ2,φ3
+    val _psi4u = psi1.mul(psi2).mul(pot31.prob).eliminate(Set(3L))
+    //println(s"\t${_psi4u.traceProbs}")
+    val psi4u = _psi4u.mul(pot21.prob).mul(p1).eliminate(Set(1L))
+    val pv6 = pot42.mul(psi4u)
+    r += "V6" -> pv6
+
+    val psi4 = pot42.eliminate(Set(4L))
+    val _psi2u = pot31.mul(p1).eliminate(Set(1L))
+    val psi2u = _psi2u.mul(psi4).mul(psi1)
+    val pv2 = pot523.mul(psi2u)
+    r += "V2" -> pv2
+
+    val _psi1u = pot31.mul(pot21.prob).mul(p1).eliminate(Set(1L))
+    val psi1u = psi2.mul(_psi1u).mul(psi4).eliminate(Set(2L))
+    val pv1 = pot63.mul(psi1u)
+    r += "V1" -> pv1
+
+    val pv4 = pot31.mul(pot21.prob).mul(psi1).mul(psi2).mul(psi4)
+    r += "V4" -> pv4
+
+    r.toMap
+  }
+
+  val fullProp1 = fullPropogationFromAndToA6(
+    pot63.eliminate(Set(6L)),
+    pot523.eliminate(Set(5L))
+  )
+
+  println("Calculating prob from full propogation")
+  val p6e = fullProp1("V1").eliminate(Set(3L))
+  val p4_1 = fullProp1("V6").eliminate(Set(2L))
+  println(s"\t${p6e.traceProbs}")
+  println(s"\t${p4_1.traceProbs}")
+
+  val fullProp2 = fullPropogationFromAndToA6(
+    pot63.applyEvidence(1),
+    pot523.eliminate(Set(5L))
+  )
+  println("Calculating prob from full propogation")
+  val p6f = fullProp2("V1").eliminate(Set(3L))
+  val p4_2 = fullProp2("V6").eliminate(Set(2L))
+  println(s"\t???? ${p6f.traceProbs}")
+  println(s"\t???? ${p4_2.traceProbs}")
+
+  val fullProp3 = fullPropogationFromAndToA6(
+    pot63.eliminate(Set(6L)),
+    pot523.applyEvidence(0)
+  )
+  println("Calculating prob from full propogation")
+  val p6g = fullProp3("V1").eliminate(Set(3L))
+  val p4_3 = fullProp3("V6").eliminate(Set(2L))
+
+  println(s"\t${p6g.traceProbs}")
+  println(s"\t${p4_3.traceProbs}")
+  val fullProp4 = fullPropogationFromAndToA6(
+    pot63.eliminate(Set(6L)),
+    pot523.applyEvidence(1)
+  )
+  println("Calculating prob from full propogation")
+  val p6h = fullProp4("V1").eliminate(Set(3L))
+  val p4_4 = fullProp4("V6").eliminate(Set(2L))
+  println(s"\t${p6h.traceProbs}")
+  println(s"\t${p4_4.traceProbs}")
 }
