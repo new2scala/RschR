@@ -8,7 +8,7 @@
         <java.source.version>1.8</java.source.version>
         <java.target.version>1.8</java.target.version>
         <scala.version>2.11.8</scala.version>
-        <spark.version>2.1.0</spark.version>
+        <spark.version>2.1.1</spark.version>
         <opencv-version>3.1.0</opencv-version>
         <scala.minor.version>2.11</scala.minor.version>
         <amazonaws.version>1.11.99</amazonaws.version>
@@ -194,6 +194,12 @@
                 <groupId>org.jgrapht</groupId>
                 <artifactId>jgrapht-ext</artifactId>
                 <version>${jgrapht.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.intel.analytics.bigdl</groupId>
+                <artifactId>bigdl-SPARK_2.1</artifactId>
+                <version>0.5.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
