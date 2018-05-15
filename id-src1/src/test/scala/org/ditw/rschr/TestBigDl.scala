@@ -9,6 +9,7 @@ import com.intel.analytics.bigdl.models.lenet.LeNet5
 import com.intel.analytics.bigdl.nn._
 import com.intel.analytics.bigdl.optim._
 import com.intel.analytics.bigdl.utils.{Engine, File}
+import com.intel.analytics.bigdl.visualization.{TrainSummary, ValidationSummary}
 import org.apache.spark.SparkContext
 
 /**
@@ -21,8 +22,8 @@ object TestBigDl extends App {
                           checkpoint: Option[String] = None,
                           modelSnapshot: Option[String] = None,
                           stateSnapshot: Option[String] = None,
-                          batchSize: Int = 12,
-                          learningRate: Double = 0.05,
+                          batchSize: Int = 10,
+                          learningRate: Double = 0.005,
                           learningRateDecay: Double = 0.0,
                           maxEpoch: Int = 1,
                           coreNumber: Int = -1,
@@ -80,8 +81,9 @@ object TestBigDl extends App {
 
   import Utils._
 
+  val appName = "Train Lenet on MNIST"
   val conf = Engine.createSparkConf()
-    .setAppName("Train Lenet on MNIST")
+    .setAppName(appName)
     .set("spark.akka.frameSize", 64.toString)
     .set("spark.task.maxFailures", "1")
     .setMaster("local[*]")
@@ -98,7 +100,15 @@ object TestBigDl extends App {
   val validationData = params.folder + "/t10k-images-idx3-ubyte"
   val validationLabel = params.folder + "/t10k-labels-idx1-ubyte"
 
-  val model = LeNet5(classNum = 10)
+  //val model = LeNet5(classNum = 10)
+
+  val model = Sequential[Float]()
+  model.add(Reshape(Array(28*28)))
+    //.add(SpatialConvolution(1, 6, 5, 5))
+    .add(Linear(28*28, 1000))
+    .add(ReLU())
+    .add(Linear(1000, 10))
+    .add(LogSoftMax())
 
   val optMethod = new SGD[Float](
     learningRate = params.learningRate,
@@ -111,11 +121,18 @@ object TestBigDl extends App {
     BytesToGreyImg(28, 28) -> GreyImgNormalizer(trainMean, trainStd) -> GreyImgToBatch(
     params.batchSize)
 
+  val logDir = "/home/dev/tb"
+  val trainSummary = TrainSummary(logDir, appName)
+  val valSummary = ValidationSummary(logDir, appName)
+
   val optimizer = Optimizer(
     model = model,
     dataset = trainSet,
     criterion = ClassNLLCriterion[Float]()
   )
+  optimizer.setTrainSummary(trainSummary)
+  optimizer.setValidationSummary(valSummary)
+
 
   val testMean = 0.13251460696903547
   val testStd = 0.31048024
