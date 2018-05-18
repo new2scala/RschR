@@ -59,6 +59,17 @@
           <groupId>com.intel.analytics.bigdl</groupId>
           <artifactId>bigdl-SPARK_2.1</artifactId>
       </dependency>
+
+      <dependency>
+          <groupId>com.twitter.twittertext</groupId>
+          <artifactId>twitter-text</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>org.testng</groupId>
+          <artifactId>testng</artifactId>
+      </dependency>
+
   </dependencies>
 
 

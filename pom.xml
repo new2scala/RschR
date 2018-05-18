@@ -201,6 +201,19 @@
                 <artifactId>bigdl-SPARK_2.1</artifactId>
                 <version>0.5.0</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.testng</groupId>
+                <artifactId>testng</artifactId>
+                <version>6.14.2</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.twitter.twittertext</groupId>
+                <artifactId>twitter-text</artifactId>
+                <version>2.0.10</version> <!-- or whatever the latest version is -->
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
