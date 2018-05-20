@@ -37,6 +37,14 @@ public class HttpRequest {
 
             return builder;
         }
+
+        public static Builder newBuilder() {
+            return new Builder();
+        }
+
+        public HttpRequest build() {
+            return new HttpRequest(this);
+        }
     }
 
 
