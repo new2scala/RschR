@@ -222,5 +222,6 @@
         <module>graph-prob</module>
         <module>scala-ptn-book-exj</module>
         <module>tiny-web-j</module>
+        <module>tiny-web-s</module>
     </modules>
 </project>

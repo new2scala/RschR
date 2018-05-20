@@ -1,0 +1,92 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.ditw</groupId>
+        <artifactId>rschr-root</artifactId>
+        <relativePath>../pom.xml</relativePath>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <name>Tiny Web in Scala</name>
+    <artifactId>tiny-web-s</artifactId>
+  <dependencies>
+      <dependency>
+          <groupId>org.scalatest</groupId>
+          <artifactId>scalatest_${scala.minor.version}</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>org.apache.commons</groupId>
+          <artifactId>commons-compress</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>org.json4s</groupId>
+          <artifactId>json4s-jackson_${scala.minor.version}</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>joda-time</groupId>
+          <artifactId>joda-time</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-core_2.11</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-mllib_2.11</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-sql_2.11</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>com.lmax</groupId>
+          <artifactId>disruptor</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>com.intel.analytics.bigdl</groupId>
+          <artifactId>bigdl-SPARK_2.1</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>com.twitter.twittertext</groupId>
+          <artifactId>twitter-text</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>org.testng</groupId>
+          <artifactId>testng</artifactId>
+      </dependency>
+
+      <!-- https://mvnrepository.com/artifact/junit/junit -->
+      <dependency>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+          <version>4.12</version>
+          <scope>test</scope>
+      </dependency>
+
+  </dependencies>
+
+
+    <build>
+        <plugins>
+			<plugin>
+				<groupId>net.alchim31.maven</groupId>
+				<artifactId>scala-maven-plugin</artifactId>
+			</plugin>
+        </plugins>
+    </build>
+</project>
