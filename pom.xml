@@ -214,6 +214,12 @@
                 <artifactId>twitter-text</artifactId>
                 <version>2.0.10</version> <!-- or whatever the latest version is -->
             </dependency>
+
+            <dependency>
+                <groupId>org.scalaz</groupId>
+                <artifactId>scalaz-core_2.11</artifactId>
+                <version>7.2.23</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
